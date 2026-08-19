@@ -126,7 +126,7 @@
     <h1>🎯 Contador de Impactos</h1>
     <p class="sub">Corre en tu teléfono — solo las fotos y coordenadas suben a tu cuenta</p>
 
-    <div class="panel">
+    <div class="panel" id="panelDatosSesion">
       <span class="step-badge">0</span><b>Datos de la sesión</b>
       <div class="slider-row">
         <label>Tirador</label>
@@ -228,7 +228,7 @@
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="panelFotoBlanco">
       <span class="step-badge">1</span><b>Foto del blanco</b>
       <div class="row" style="margin-top:12px;">
         <label class="btn">
@@ -631,14 +631,45 @@ const nuevaDianaFoto = document.getElementById('nuevaDianaFoto');
 const nuevaDianaEstado = document.getElementById('nuevaDianaEstado');
 let nuevaDianaArchivo = null;
 
+const panelDatosSesion = document.getElementById('panelDatosSesion');
+const panelFotoBlanco = document.getElementById('panelFotoBlanco');
+let modoAgregarDiana = false;
+
+function limpiarCanvasActual() {
+  if (srcMat) { srcMat.delete(); srcMat = null; }
+  detecciones = [];
+  calibracion = null;
+  calibrando = null;
+  canvasWrap.style.display = 'none';
+  resultPanel.style.display = 'none';
+  sesionPanel.style.display = 'none';
+  puntajeInfo.style.display = 'none';
+}
+
 document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
+  modoAgregarDiana = true;
+  panelDatosSesion.style.display = 'none';
+  panelFotoBlanco.style.display = 'none';
+  puntajePanel.style.display = 'none';
+  limpiarCanvasActual();
   agregarDianaPanel.style.display = 'block';
   agregarDianaPanel.scrollIntoView({ behavior: 'smooth' });
 });
-document.getElementById('cancelarAgregarDiana').addEventListener('click', () => {
+
+function cerrarModoAgregarDiana() {
+  modoAgregarDiana = false;
   agregarDianaPanel.style.display = 'none';
   geometriaBloque.style.display = 'none';
-});
+  tipoGeometriaSelect.value = 'ninguno';
+  circulosBloque.style.display = 'none';
+  contornoBloqueUI.style.display = 'none';
+  limpiarCanvasActual();
+  panelDatosSesion.style.display = 'block';
+  panelFotoBlanco.style.display = 'block';
+  actualizarPanelPuntaje(presetActual());
+}
+
+document.getElementById('cancelarAgregarDiana').addEventListener('click', cerrarModoAgregarDiana);
 
 const tipoGeometriaSelect = document.getElementById('tipoGeometriaSelect');
 const circulosBloque = document.getElementById('circulosBloque');
@@ -741,15 +772,11 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
   nuevaDianaEstado.textContent = 'Diana guardada ✔';
   nuevaDianaNombre.value = '';
   nuevaDianaArchivo = null;
-  tipoGeometriaSelect.value = 'ninguno';
-  circulosBloque.style.display = 'none';
-  contornoBloqueUI.style.display = 'none';
   await cargarDianasDesdeSupabase();
   setTimeout(() => {
-    agregarDianaPanel.style.display = 'none';
-    geometriaBloque.style.display = 'none';
     nuevaDianaEstado.textContent = '';
-  }, 1500);
+    cerrarModoAgregarDiana();
+  }, 1200);
 });
 
 // ============================================================
