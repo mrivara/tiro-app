@@ -94,6 +94,35 @@
       <a href="#" id="logoutBtn">Cerrar sesión</a>
     </div>
 
+    <div class="panel" id="adminPanel" style="display:none;">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <b>👥 Administración de usuarios</b>
+        <label class="btn secondary" id="abrirAdminPanel" style="flex:0; padding:8px 14px; font-size:13px;">Abrir</label>
+      </div>
+      <div id="adminPanelBody" style="display:none; margin-top:12px;">
+        <div class="slider-row">
+          <label>Nuevo usuario</label>
+          <input type="text" id="adminNuevoUsuario" autocapitalize="off" autocorrect="off" placeholder="usuario">
+        </div>
+        <div class="slider-row">
+          <label>Contraseña</label>
+          <input type="password" id="adminNuevaPassword" placeholder="contraseña (mín. 6 caracteres)">
+        </div>
+        <div class="slider-row">
+          <label>Rol</label>
+          <select id="adminNuevoRol">
+            <option value="normal">Normal (ve solo sus propias dianas)</option>
+            <option value="admin">Admin (ve todo, sus dianas son públicas)</option>
+          </select>
+        </div>
+        <div class="row" style="margin-top:12px;">
+          <button class="btn" id="adminCrearUsuarioBtn">Crear usuario</button>
+        </div>
+        <div id="adminEstado" class="hint"></div>
+        <div id="adminListaUsuarios" style="margin-top:14px;"></div>
+      </div>
+    </div>
+
     <h1>🎯 Contador de Impactos</h1>
     <p class="sub">Corre en tu teléfono — solo las fotos y coordenadas suben a tu cuenta</p>
 
@@ -353,6 +382,11 @@ async function onLoginExitoso(session) {
     ? '<span class="badge publica">admin</span>'
     : '<span class="badge propia">usuario</span>';
 
+  if (perfil.role === 'admin') {
+    adminPanel.style.display = 'block';
+    refrescarListaUsuarios();
+  }
+
   loginGate.style.display = 'none';
   appContent.style.display = 'block';
 
@@ -361,6 +395,59 @@ async function onLoginExitoso(session) {
   await cargarDianasDesdeSupabase();
   abrirDB().then(refrescarRondas);
 }
+
+// ---------- panel de administración de usuarios (solo admins) ----------
+const adminPanel = document.getElementById('adminPanel');
+const abrirAdminPanel = document.getElementById('abrirAdminPanel');
+const adminPanelBody = document.getElementById('adminPanelBody');
+const adminNuevoUsuario = document.getElementById('adminNuevoUsuario');
+const adminNuevaPassword = document.getElementById('adminNuevaPassword');
+const adminNuevoRol = document.getElementById('adminNuevoRol');
+const adminEstado = document.getElementById('adminEstado');
+const adminListaUsuarios = document.getElementById('adminListaUsuarios');
+
+abrirAdminPanel.addEventListener('click', () => {
+  const abierto = adminPanelBody.style.display === 'block';
+  adminPanelBody.style.display = abierto ? 'none' : 'block';
+  abrirAdminPanel.textContent = abierto ? 'Abrir' : 'Cerrar';
+});
+
+async function refrescarListaUsuarios() {
+  const { data, error } = await sb.from('profiles').select('username, role').order('username');
+  if (error || !data) return;
+  adminListaUsuarios.innerHTML = data.map(u => `
+    <div class="diana-item">
+      <span>${u.username}</span>
+      <span class="badge ${u.role === 'admin' ? 'publica' : 'propia'}">${u.role}</span>
+    </div>
+  `).join('');
+}
+
+document.getElementById('adminCrearUsuarioBtn').addEventListener('click', async () => {
+  const username = adminNuevoUsuario.value.trim();
+  const password = adminNuevaPassword.value;
+  const role = adminNuevoRol.value;
+
+  if (!username || !password) {
+    adminEstado.textContent = 'Completá usuario y contraseña.';
+    return;
+  }
+  adminEstado.textContent = 'Creando...';
+
+  const { data, error } = await sb.functions.invoke('admin-create-user', {
+    body: { username, password, role },
+  });
+
+  if (error || (data && data.error)) {
+    adminEstado.textContent = 'Error: ' + (data?.error || error.message);
+    return;
+  }
+  adminEstado.textContent = `Usuario "${username}" creado ✔`;
+  adminNuevoUsuario.value = '';
+  adminNuevaPassword.value = '';
+  await refrescarListaUsuarios();
+  setTimeout(() => adminEstado.textContent = '', 2500);
+});
 
 // al cargar la página, si ya había sesión guardada, entrar directo
 sb.auth.getSession().then(({ data }) => {
