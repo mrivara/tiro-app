@@ -260,19 +260,21 @@
       <div id="count">-- <span>impactos detectados</span></div>
 
       <div class="controls" id="controls">
-        <p class="hint">
-          <span class="step-badge">2</span>
-          Tocá un círculo para <b>borrarlo</b> (falso positivo).
-          Tocá en cualquier otro punto del blanco para <b>agregar</b> uno.
-        </p>
+        <div id="bloqueModoEdicion">
+          <p class="hint">
+            <span class="step-badge">2</span>
+            Tocá un círculo para <b>borrarlo</b> (falso positivo).
+            Tocá en cualquier otro punto del blanco para <b>agregar</b> uno.
+          </p>
 
-        <div class="slider-row">
-          <label>Modo de edición al tocar la foto</label>
-          <div class="row">
-            <label class="btn secondary" id="modoEditarBtn" style="flex:1; font-size:13px;">✏️ Agregar / borrar</label>
-            <label class="btn secondary" id="modoMarcarBtn" style="flex:1; font-size:13px;">🔁 Marcar previo / nuevo</label>
+          <div class="slider-row">
+            <label>Modo de edición al tocar la foto</label>
+            <div class="row">
+              <label class="btn secondary" id="modoEditarBtn" style="flex:1; font-size:13px;">✏️ Agregar / borrar</label>
+              <label class="btn secondary" id="modoMarcarBtn" style="flex:1; font-size:13px;">🔁 Marcar previo / nuevo</label>
+            </div>
+            <p class="hint" id="modoEdicionHint">Tocá un impacto para borrarlo, o un punto vacío para agregar uno.</p>
           </div>
-          <p class="hint" id="modoEdicionHint">Tocá un impacto para borrarlo, o un punto vacío para agregar uno.</p>
         </div>
 
         <div class="slider-row">
@@ -651,6 +653,7 @@ document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
   panelDatosSesion.style.display = 'none';
   panelFotoBlanco.style.display = 'none';
   puntajePanel.style.display = 'none';
+  document.getElementById('bloqueModoEdicion').style.display = 'none';
   limpiarCanvasActual();
   agregarDianaPanel.style.display = 'block';
   agregarDianaPanel.scrollIntoView({ behavior: 'smooth' });
@@ -663,6 +666,7 @@ function cerrarModoAgregarDiana() {
   tipoGeometriaSelect.value = 'ninguno';
   circulosBloque.style.display = 'none';
   contornoBloqueUI.style.display = 'none';
+  document.getElementById('bloqueModoEdicion').style.display = 'block';
   limpiarCanvasActual();
   panelDatosSesion.style.display = 'block';
   panelFotoBlanco.style.display = 'block';
@@ -820,14 +824,28 @@ const distanciaSelect = document.getElementById('distanciaSelect');
 const puntajePanel = document.getElementById('puntajePanel');
 const calibrarBtn = document.getElementById('calibrarBtn');
 const puntajeInfo = document.getElementById('puntajeInfo');
-let calibrando = null;   // null | 'centro' | 'borde' | 'anillo'
+let calibrando = null;   // null | 'circuloExterior' | 'anillo' | 'contornoP1' | 'contornoP2' | 'contorno'
 let calibracion = null;  // {cx, cy, rOuter, geometria:{zonas, radios}}
 let calibrandoModoGeometria = false; // true = tap por cada zona (irregular)
 let calibrandoZonasObjetivo = 9;
 let calibrandoRadiosTemp = []; // radios crudos (px) durante calibración por zona
+let calibrandoCirculoTemp = []; // los 3 puntos del anillo exterior mientras se tocan
+let calibrandoDefinirGeometria = false; // true = estamos definiendo una geometría nueva (Agregar diana); false = reubicando una ya guardada
 
 function geometriaPareja(zonas) {
   return { zonas, radios: Array.from({ length: zonas }, (_, i) => (i + 1) / zonas) };
+}
+
+// centro + radio exactos a partir de 3 puntos sobre un círculo -- mucho más
+// preciso que tocar el centro a mano (un punto minúsculo, fácil de errar).
+function circuloDesde3Puntos(p1, p2, p3) {
+  const [x1, y1] = [p1.x, p1.y], [x2, y2] = [p2.x, p2.y], [x3, y3] = [p3.x, p3.y];
+  const d = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
+  if (Math.abs(d) < 1e-6) return null; // puntos casi alineados, no forman círculo válido
+  const ux = ((x1 * x1 + y1 * y1) * (y2 - y3) + (x2 * x2 + y2 * y2) * (y3 - y1) + (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
+  const uy = ((x1 * x1 + y1 * y1) * (x3 - x2) + (x2 * x2 + y2 * y2) * (x1 - x3) + (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
+  const r = Math.hypot(x1 - ux, y1 - uy);
+  return { cx: ux, cy: uy, r };
 }
 
 function puntoEnPoligono(x, y, vertices) {
@@ -842,8 +860,9 @@ function puntoEnPoligono(x, y, vertices) {
   return dentro;
 }
 
-// calibración sobre una foto real: 2 toques, usando la geometría YA
-// guardada de la diana seleccionada (círculos o contorno)
+// calibración sobre una foto real: 3 toques sobre el anillo exterior
+// (círculo más grande) para fijar centro+radio con precisión, usando la
+// geometría YA guardada de la diana seleccionada (círculos o contorno)
 calibrarBtn.addEventListener('click', () => {
   const preset = presetActual();
   const geometria = (preset && preset.geometria) || geometriaPareja(9);
@@ -855,11 +874,14 @@ calibrarBtn.addEventListener('click', () => {
     puntajeInfo.innerHTML = '👉 Tocá la <b>esquina superior-izquierda</b> del área de la zona.';
   } else {
     calibrandoModoGeometria = false;
+    calibrandoDefinirGeometria = false;
+    calibrandoCirculoTemp = [];
     calibracion = { tipo: 'circulos', cx: 0, cy: 0, rOuter: 0, geometria };
-    calibrando = 'centro';
-    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco en la foto.';
+    calibrando = 'circuloExterior';
+    puntajeInfo.innerHTML = '👉 Tocá <b>3 puntos distintos</b> sobre el borde del anillo más grande (1/3).';
   }
 });
+
 
 function puntajeDe(dist, rOuter, geometria) {
   if (rOuter <= 0 || !geometria || !geometria.radios || !geometria.radios.length) return 0;
@@ -908,19 +930,13 @@ calibrarGeometriaBtn.addEventListener('click', () => {
   const zonas = Math.max(1, parseInt(zonasInput.value, 10) || 9);
   calibrandoZonasObjetivo = zonas;
   calibrandoRadiosTemp = [];
+  calibrandoCirculoTemp = [];
+  calibrandoModoGeometria = !parejoCheckbox.checked;
+  calibrandoDefinirGeometria = true;
+  calibracion = null;
+  calibrando = 'circuloExterior';
   puntajeInfo.style.display = 'block';
-
-  if (parejoCheckbox.checked) {
-    calibrandoModoGeometria = false;
-    calibracion = { tipo: 'circulos', cx: 0, cy: 0, rOuter: 0, geometria: geometriaPareja(zonas) };
-    calibrando = 'centro';
-    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco.';
-  } else {
-    calibrandoModoGeometria = true;
-    calibracion = null;
-    calibrando = 'centro';
-    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco.';
-  }
+  puntajeInfo.innerHTML = '👉 Tocá <b>3 puntos distintos</b> sobre el borde del anillo más grande (1/3).';
 });
 
 
@@ -1123,6 +1139,7 @@ function handleFileObject(file) {
     calibrando = null;
     calibrandoContornoTemp = [];
     calibrandoRadiosTemp = [];
+    calibrandoCirculoTemp = [];
     if (terminarContornoRow) terminarContornoRow.style.display = 'none';
     puntajeInfo.style.display = 'none';
 
@@ -1252,6 +1269,15 @@ function redibujar() {
     ctx.lineWidth = 2;
   }
 
+  // puntos ya tocados sobre el anillo exterior, mientras se juntan los 3
+  if (calibrando === 'circuloExterior' && calibrandoCirculoTemp.length) {
+    calibrandoCirculoTemp.forEach(p => {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, 2 * Math.PI);
+      ctx.fill();
+    });
+  }
+
   // trazado del contorno mientras se está definiendo (diana nueva)
   if (calibrando === 'contorno' && calibrandoContornoTemp.length) {
     dibujarPoligono(calibrandoContornoTemp, false);
@@ -1282,9 +1308,13 @@ function redibujar() {
   });
   const nuevos = detecciones.filter(d => d.esNuevo !== false).length;
   const hayComparacion = !!rondaAnteriorParaSeleccionActual();
-  countEl.innerHTML = hayComparacion
-    ? `${nuevos} <span>nuevos (de ${detecciones.length} totales)</span>`
-    : `${detecciones.length} <span>impactos detectados</span>`;
+  if (modoAgregarDiana) {
+    countEl.innerHTML = `${detecciones.length} <span>candidatos detectados en esta foto (ajustá los sliders para que no haya falsos)</span>`;
+  } else {
+    countEl.innerHTML = hayComparacion
+      ? `${nuevos} <span>nuevos (de ${detecciones.length} totales)</span>`
+      : `${detecciones.length} <span>impactos detectados</span>`;
+  }
 }
 
 // ---------- zoom del canvas (para tocar impactos con más precisión) ----------
@@ -1317,39 +1347,56 @@ canvas.addEventListener('click', (e) => {
   const x = (e.clientX - rect.left) * scaleX;
   const y = (e.clientY - rect.top) * scaleY;
 
-  if (calibrando === 'centro') {
-    if (calibrandoModoGeometria) {
-      calibracion = { tipo: 'circulos', cx: x, cy: y, rOuter: 0, geometria: { zonas: calibrandoZonasObjetivo, radios: [] } };
+  if (calibrando === 'circuloExterior') {
+    calibrandoCirculoTemp.push({ x, y });
+    if (calibrandoCirculoTemp.length < 3) {
+      puntajeInfo.innerHTML = `👉 Tocá otro punto sobre el borde del anillo más grande (${calibrandoCirculoTemp.length + 1}/3).`;
+      redibujar();
+      return;
+    }
+    const ajuste = circuloDesde3Puntos(calibrandoCirculoTemp[0], calibrandoCirculoTemp[1], calibrandoCirculoTemp[2]);
+    if (!ajuste) {
+      puntajeInfo.innerHTML = '⚠️ Esos 3 puntos están casi en línea recta, no forman un círculo. Probá de nuevo, más separados.';
+      calibrandoCirculoTemp = [];
+      redibujar();
+      return;
+    }
+    if (!calibracion) calibracion = { tipo: 'circulos', geometria: { zonas: calibrandoZonasObjetivo, radios: [] } };
+    calibracion.cx = ajuste.cx; calibracion.cy = ajuste.cy; calibracion.rOuter = ajuste.r;
+
+    if (!calibrandoDefinirGeometria) {
+      // reubicando una geometría YA guardada (diana existente): nada más que hacer
+      calibrando = null;
+      calcularPuntajes();
+    } else if (calibrandoModoGeometria) {
+      // definiendo una geometría nueva, zonas irregulares: falta 1 toque por zona (N-1)
       calibrandoRadiosTemp = [];
       calibrando = 'anillo';
-      puntajeInfo.innerHTML = `👉 Tocá el borde de la zona <b>${calibrandoZonasObjetivo}</b> (la de más adentro, vale más puntos).`;
+      const primeraZona = calibrandoZonasObjetivo - 1;
+      puntajeInfo.innerHTML = primeraZona >= 1
+        ? `👉 Centro fijado. Ahora tocá el borde de la zona <b>${primeraZona}</b> (la de más adentro, vale más puntos).`
+        : '';
+      if (primeraZona < 1) { calibracion.geometria.radios = [1]; calibrando = null; calcularPuntajes(); }
     } else {
-      calibracion.cx = x; calibracion.cy = y; calibracion.rOuter = 0;
-      calibrando = 'borde';
-      puntajeInfo.innerHTML = '👉 Ahora tocá el <b>borde exterior</b> (la última zona, la que menos puntos vale).';
+      // definiendo una geometría nueva, zonas parejas: ya está todo listo
+      calibracion.geometria = geometriaPareja(calibrandoZonasObjetivo);
+      calibrando = null;
+      calcularPuntajes();
     }
-    redibujar();
-    return;
-  }
-  if (calibrando === 'borde') {
-    calibracion.rOuter = Math.hypot(x - calibracion.cx, y - calibracion.cy);
-    calibrando = null;
-    calcularPuntajes();
     redibujar();
     return;
   }
   if (calibrando === 'anillo') {
     const dist = Math.hypot(x - calibracion.cx, y - calibracion.cy);
     calibrandoRadiosTemp.push(dist);
-    const restantes = calibrandoZonasObjetivo - calibrandoRadiosTemp.length;
+    const restantes = calibrandoZonasObjetivo - 1 - calibrandoRadiosTemp.length;
     if (restantes > 0) {
       puntajeInfo.innerHTML = `👉 Tocá el borde de la zona <b>${restantes}</b>.`;
       redibujar();
       return;
     }
-    const rOuter = calibrandoRadiosTemp[calibrandoRadiosTemp.length - 1];
-    calibracion.rOuter = rOuter;
-    calibracion.geometria.radios = calibrandoRadiosTemp.map(r => r / rOuter);
+    // radios de las zonas N..2 (normalizados) + 1.0 para la zona 1 (=rOuter, ya conocido)
+    calibracion.geometria.radios = calibrandoRadiosTemp.map(r => r / calibracion.rOuter).concat([1]);
     calibrando = null;
     calcularPuntajes();
     redibujar();
@@ -1380,6 +1427,10 @@ canvas.addEventListener('click', (e) => {
     redibujar();
     return;
   }
+
+  // en modo "agregar diana" no se editan impactos, solo se calibra
+  // (los pasos de calibración de arriba ya devolvieron antes de llegar acá)
+  if (modoAgregarDiana) return;
 
   const idx = detecciones.findIndex(d => Math.hypot(d.x - x, d.y - y) < Math.max(d.r + 6, 18));
 
