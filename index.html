@@ -134,7 +134,10 @@
       </div>
       <div class="slider-row">
         <label>Diana</label>
-        <select id="dianaSelect"></select>
+        <div style="display:flex; gap:10px; align-items:flex-start;">
+          <select id="dianaSelect" style="flex:1;"></select>
+          <img id="referenciaThumb" style="display:none; width:25%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:1px solid #333;">
+        </div>
       </div>
       <div class="row" style="margin-top:8px;">
         <label class="btn secondary" id="abrirAgregarDiana" style="font-size:13px;">➕ Agregar diana de referencia</label>
@@ -172,6 +175,53 @@
         </label>
       </div>
       <div id="nuevaDianaEstado" class="hint"></div>
+
+      <div id="geometriaBloque" style="display:none; margin-top:14px; border-top:1px solid #2c2c2e; padding-top:12px;">
+        <b style="font-size:13px;">🎯 ¿Este blanco tiene zona de puntaje/impacto para marcar?</b>
+        <div class="slider-row">
+          <label>Tipo</label>
+          <select id="tipoGeometriaSelect">
+            <option value="ninguno">No, solo contar impactos</option>
+            <option value="circulos">Anillos circulares con puntaje (9, 8, 7...)</option>
+            <option value="contorno">Contorno cerrado — adentro/afuera (silueta, rectángulo, etc.)</option>
+          </select>
+        </div>
+
+        <div id="circulosBloque" style="display:none; margin-top:10px;">
+          <div class="slider-row">
+            <label>Cantidad de zonas de puntaje</label>
+            <input type="text" inputmode="numeric" id="zonasInput" value="9" style="width:80px;">
+          </div>
+          <div class="slider-row" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="parejoCheckbox" checked style="width:auto;">
+            <label style="margin:0;">Las zonas tienen todas el mismo ancho (ej: ISSF/ProTarget)</label>
+          </div>
+          <p class="hint">
+            Con zonas parejas alcanza con 2 toques (centro + borde exterior).
+            Si no son parejas, tocás el borde de cada zona una por una, de
+            la de más puntos (adentro) hacia afuera.
+          </p>
+          <div class="row">
+            <label class="btn secondary" id="calibrarGeometriaBtn">📍 Calibrar anillos sobre la foto</label>
+          </div>
+        </div>
+
+        <div id="contornoBloqueUI" style="display:none; margin-top:10px;">
+          <p class="hint">
+            Tocá varios puntos siguiendo el borde de la zona (silueta,
+            rectángulo, lo que sea) — cuantos más puntos, más fiel el
+            contorno. Cuando termines, tocá "Terminar contorno".
+          </p>
+          <div class="row">
+            <label class="btn secondary" id="trazarContornoBtn">📍 Trazar contorno sobre la foto</label>
+          </div>
+          <div id="contornoEstado" class="hint" style="margin-top:8px;"></div>
+          <div class="row" id="terminarContornoRow" style="display:none; margin-top:8px;">
+            <button class="btn" id="terminarContornoBtn">✅ Terminar contorno</button>
+          </div>
+        </div>
+      </div>
+
       <div class="row" style="margin-top:12px;">
         <label class="btn secondary" id="cancelarAgregarDiana">Cancelar</label>
         <button class="btn" id="guardarNuevaDiana">💾 Guardar diana</button>
@@ -270,15 +320,10 @@
     </p>
 
     <div class="panel" id="puntajePanel" style="display:none;">
-      <b>🎯 Puntaje</b>
-      <p class="hint">
-        Tocá <b>el centro exacto</b> del blanco, y después tocá <b>el borde
-        exterior del anillo 1</b> (el círculo más grande). Con esos dos
-        toques calcula el puntaje de cada impacto (fórmula: cada anillo
-        es 10% del radio exterior, de 9 en el centro a 1 en el borde).
-      </p>
+      <b id="puntajePanelTitulo">🎯 Puntaje / zona</b>
+      <p class="hint" id="puntajePanelHint"></p>
       <div class="row">
-        <label class="btn secondary" id="calibrarBtn">📍 Calibrar centro y borde</label>
+        <label class="btn secondary" id="calibrarBtn">📍 Calibrar</label>
       </div>
       <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
     </div>
@@ -500,6 +545,8 @@ function renderDianaSelect() {
   if (seleccionPrevia && [...dianaSelect.options].some(o => o.value === seleccionPrevia)) {
     dianaSelect.value = seleccionPrevia;
   }
+  actualizarPanelPuntaje(presetActual());
+  actualizarReferenciaThumb();
 }
 
 function presetActual() {
@@ -513,17 +560,56 @@ function presetActual() {
     if (!d) return null;
     return {
       nombre: d.nombre, modo: d.modo, param2: d.param2, radio: d.radio,
-      thresh: d.thresh, circ: d.circ, puntaje: d.puntaje,
+      thresh: d.thresh, circ: d.circ, puntaje: d.puntaje, geometria: d.geometria,
+      imagen_path: d.imagen_path,
     };
   }
   return null;
 }
 
 const dianaSelect = document.getElementById('dianaSelect');
+const referenciaThumb = document.getElementById('referenciaThumb');
+
+async function actualizarReferenciaThumb() {
+  const val = dianaSelect.value;
+  if (val.startsWith('nube:')) {
+    const d = dianasNube.find(x => x.id === val.slice(5));
+    if (d && d.imagen_path) {
+      const { data } = await sb.storage.from('dianas').createSignedUrl(d.imagen_path, 3600);
+      if (data) {
+        referenciaThumb.src = data.signedUrl;
+        referenciaThumb.style.display = 'block';
+        return;
+      }
+    }
+  }
+  referenciaThumb.style.display = 'none';
+}
+
+function actualizarPanelPuntaje(preset) {
+  const geometria = preset && preset.geometria;
+  puntajePanel.style.display = geometria ? 'block' : 'none';
+  if (!geometria) { calibracion = null; puntajeInfo.style.display = 'none'; return; }
+
+  if (geometria.tipo === 'contorno') {
+    document.getElementById('puntajePanelTitulo').textContent = '🎯 Zona (adentro / afuera)';
+    document.getElementById('puntajePanelHint').innerHTML =
+      'Tocá <b>la esquina superior-izquierda</b> y después <b>la esquina inferior-derecha</b> ' +
+      'del área donde está la zona marcada, para ubicarla sobre esta foto.';
+    calibrarBtn.textContent = '📍 Calibrar ubicación de la zona';
+  } else {
+    document.getElementById('puntajePanelTitulo').textContent = '🎯 Puntaje';
+    document.getElementById('puntajePanelHint').innerHTML =
+      'Tocá <b>el centro</b> del blanco, y después <b>el borde exterior</b> ' +
+      '(la última zona). Con esos dos toques calcula el puntaje de cada impacto.';
+    calibrarBtn.textContent = '📍 Calibrar centro y borde';
+  }
+}
+
 dianaSelect.addEventListener('change', () => {
   const preset = presetActual();
-  puntajePanel.style.display = (preset && preset.puntaje) ? 'block' : 'none';
-  if (!(preset && preset.puntaje)) { calibracion = null; puntajeInfo.style.display = 'none'; }
+  actualizarPanelPuntaje(preset);
+  actualizarReferenciaThumb();
   if (!preset || !preset.modo) return;
   setModo(preset.modo);
   if (preset.modo === 'hough') {
@@ -551,6 +637,52 @@ document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
 });
 document.getElementById('cancelarAgregarDiana').addEventListener('click', () => {
   agregarDianaPanel.style.display = 'none';
+  geometriaBloque.style.display = 'none';
+});
+
+const tipoGeometriaSelect = document.getElementById('tipoGeometriaSelect');
+const circulosBloque = document.getElementById('circulosBloque');
+const contornoBloqueUI = document.getElementById('contornoBloqueUI');
+const trazarContornoBtn = document.getElementById('trazarContornoBtn');
+const terminarContornoBtn = document.getElementById('terminarContornoBtn');
+const terminarContornoRow = document.getElementById('terminarContornoRow');
+const contornoEstado = document.getElementById('contornoEstado');
+let calibrandoContornoTemp = [];
+
+tipoGeometriaSelect.addEventListener('change', () => {
+  circulosBloque.style.display = tipoGeometriaSelect.value === 'circulos' ? 'block' : 'none';
+  contornoBloqueUI.style.display = tipoGeometriaSelect.value === 'contorno' ? 'block' : 'none';
+  calibracion = null;
+  puntajeInfo.style.display = 'none';
+});
+
+trazarContornoBtn.addEventListener('click', () => {
+  calibrando = 'contorno';
+  calibrandoContornoTemp = [];
+  calibracion = null;
+  terminarContornoRow.style.display = 'none';
+  contornoEstado.textContent = '0 puntos trazados. Tocá la foto siguiendo el borde de la zona.';
+  redibujar();
+});
+
+terminarContornoBtn.addEventListener('click', () => {
+  if (calibrandoContornoTemp.length < 3) {
+    contornoEstado.textContent = 'Necesitás al menos 3 puntos.';
+    return;
+  }
+  const xs = calibrandoContornoTemp.map(p => p.x);
+  const ys = calibrandoContornoTemp.map(p => p.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const vertices = calibrandoContornoTemp.map(p => ({
+    xf: (p.x - minX) / (maxX - minX),
+    yf: (p.y - minY) / (maxY - minY),
+  }));
+  calibracion = { tipo: 'contorno', vertices };
+  calibrando = null;
+  terminarContornoRow.style.display = 'none';
+  contornoEstado.textContent = `Contorno guardado (${vertices.length} puntos) ✔`;
+  redibujar();
 });
 
 nuevaDianaFoto.addEventListener('change', (e) => {
@@ -560,6 +692,7 @@ nuevaDianaFoto.addEventListener('change', (e) => {
     // los sliders mirando el resultado en vivo, antes de guardar
     handleFileObject(nuevaDianaArchivo);
     nuevaDianaEstado.textContent = 'Foto cargada — ajustá los sliders de abajo hasta que la detección se vea bien, después guardá.';
+    geometriaBloque.style.display = 'block';
   }
 });
 
@@ -580,6 +713,13 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
     }
   }
 
+  let geometria = null;
+  if (tipoGeometriaSelect.value === 'circulos' && calibracion && calibracion.tipo === 'circulos') {
+    geometria = { tipo: 'circulos', zonas: calibracion.geometria.zonas, radios: calibracion.geometria.radios };
+  } else if (tipoGeometriaSelect.value === 'contorno' && calibracion && calibracion.tipo === 'contorno') {
+    geometria = { tipo: 'contorno', vertices: calibracion.vertices };
+  }
+
   const registro = {
     owner_id: sesionActual.user.id,
     nombre,
@@ -588,7 +728,8 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
     radio: modo === 'hough' ? parseInt(radioSlider.value, 10) : null,
     thresh: modo === 'blanco' ? parseInt(threshSlider.value, 10) : null,
     circ: modo === 'blanco' ? parseInt(circSlider.value, 10) : null,
-    puntaje: !!calibracion,
+    puntaje: geometria != null && geometria.tipo === 'circulos',
+    geometria,
     imagen_path: imagenPath,
   };
 
@@ -600,8 +741,15 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
   nuevaDianaEstado.textContent = 'Diana guardada ✔';
   nuevaDianaNombre.value = '';
   nuevaDianaArchivo = null;
+  tipoGeometriaSelect.value = 'ninguno';
+  circulosBloque.style.display = 'none';
+  contornoBloqueUI.style.display = 'none';
   await cargarDianasDesdeSupabase();
-  setTimeout(() => { agregarDianaPanel.style.display = 'none'; nuevaDianaEstado.textContent = ''; }, 1500);
+  setTimeout(() => {
+    agregarDianaPanel.style.display = 'none';
+    geometriaBloque.style.display = 'none';
+    nuevaDianaEstado.textContent = '';
+  }, 1500);
 });
 
 // ============================================================
@@ -641,38 +789,113 @@ const listaRondas = document.getElementById('listaRondas');
 const tiradorInput = document.getElementById('tiradorInput');
 const distanciaSelect = document.getElementById('distanciaSelect');
 
-// ---------- puntaje: centro + radio exterior calibrados a mano ----------
+// ---------- puntaje: geometría configurable por diana ----------
 const puntajePanel = document.getElementById('puntajePanel');
 const calibrarBtn = document.getElementById('calibrarBtn');
 const puntajeInfo = document.getElementById('puntajeInfo');
-let calibrando = null;   // null | 'centro' | 'borde'
-let calibracion = null;  // {cx, cy, rOuter}
+let calibrando = null;   // null | 'centro' | 'borde' | 'anillo'
+let calibracion = null;  // {cx, cy, rOuter, geometria:{zonas, radios}}
+let calibrandoModoGeometria = false; // true = tap por cada zona (irregular)
+let calibrandoZonasObjetivo = 9;
+let calibrandoRadiosTemp = []; // radios crudos (px) durante calibración por zona
 
+function geometriaPareja(zonas) {
+  return { zonas, radios: Array.from({ length: zonas }, (_, i) => (i + 1) / zonas) };
+}
+
+function puntoEnPoligono(x, y, vertices) {
+  let dentro = false;
+  for (let i = 0, j = vertices.length - 1; i < vertices.length; j = i++) {
+    const xi = vertices[i].x, yi = vertices[i].y;
+    const xj = vertices[j].x, yj = vertices[j].y;
+    const interseca = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (interseca) dentro = !dentro;
+  }
+  return dentro;
+}
+
+// calibración sobre una foto real: 2 toques, usando la geometría YA
+// guardada de la diana seleccionada (círculos o contorno)
 calibrarBtn.addEventListener('click', () => {
-  calibrando = 'centro';
-  calibracion = null;
+  const preset = presetActual();
+  const geometria = (preset && preset.geometria) || geometriaPareja(9);
   puntajeInfo.style.display = 'block';
-  puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco en la foto.';
+
+  if (geometria.tipo === 'contorno') {
+    calibrando = 'contornoP1';
+    calibracion = { tipo: 'contorno', vertices: geometria.vertices, p1: null, p2: null };
+    puntajeInfo.innerHTML = '👉 Tocá la <b>esquina superior-izquierda</b> del área de la zona.';
+  } else {
+    calibrandoModoGeometria = false;
+    calibracion = { tipo: 'circulos', cx: 0, cy: 0, rOuter: 0, geometria };
+    calibrando = 'centro';
+    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco en la foto.';
+  }
 });
 
-function puntajeDe(dist, rOuter) {
-  if (rOuter <= 0) return 0;
+function puntajeDe(dist, rOuter, geometria) {
+  if (rOuter <= 0 || !geometria || !geometria.radios || !geometria.radios.length) return 0;
   const pct = dist / rOuter;
-  if (pct > 0.9) return 0;
-  return Math.max(0, 9 - Math.floor(pct * 10));
+  const radios = geometria.radios;
+  for (let i = 0; i < radios.length; i++) {
+    if (pct <= radios[i]) return geometria.zonas - i;
+  }
+  return 0;
 }
 
 function calcularPuntajes() {
   if (!calibracion) return;
+
+  if (calibracion.tipo === 'contorno') {
+    if (!calibracion.verticesReal) return;
+    detecciones.forEach(d => {
+      d.dentro = puntoEnPoligono(d.x, d.y, calibracion.verticesReal);
+      d.puntaje = null;
+    });
+    const dentro = detecciones.filter(d => d.dentro).length;
+    puntajeInfo.style.display = 'block';
+    puntajeInfo.innerHTML = `<b style="color:#34c759;">${dentro} adentro</b> · ` +
+      `<b style="color:#ff9f0a;">${detecciones.length - dentro} afuera</b> (de ${detecciones.length} impactos)`;
+    return;
+  }
+
+  if (!calibracion.geometria) return;
   detecciones.forEach(d => {
     const dist = Math.hypot(d.x - calibracion.cx, d.y - calibracion.cy);
-    d.puntaje = puntajeDe(dist, calibracion.rOuter);
+    d.puntaje = puntajeDe(dist, calibracion.rOuter, calibracion.geometria);
   });
   const total = detecciones.reduce((s, d) => s + (d.puntaje || 0), 0);
   puntajeInfo.style.display = 'block';
   puntajeInfo.innerHTML = `Puntaje total: <b style="color:#fff; font-size:16px;">${total}</b>` +
     ` (${detecciones.length} impactos, promedio ${(detecciones.length ? (total/detecciones.length).toFixed(1) : 0)})`;
 }
+
+// ---------- calibración de geometría al crear una diana nueva ----------
+const geometriaBloque = document.getElementById('geometriaBloque');
+const zonasInput = document.getElementById('zonasInput');
+const parejoCheckbox = document.getElementById('parejoCheckbox');
+const calibrarGeometriaBtn = document.getElementById('calibrarGeometriaBtn');
+
+calibrarGeometriaBtn.addEventListener('click', () => {
+  const zonas = Math.max(1, parseInt(zonasInput.value, 10) || 9);
+  calibrandoZonasObjetivo = zonas;
+  calibrandoRadiosTemp = [];
+  puntajeInfo.style.display = 'block';
+
+  if (parejoCheckbox.checked) {
+    calibrandoModoGeometria = false;
+    calibracion = { tipo: 'circulos', cx: 0, cy: 0, rOuter: 0, geometria: geometriaPareja(zonas) };
+    calibrando = 'centro';
+    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco.';
+  } else {
+    calibrandoModoGeometria = true;
+    calibracion = null;
+    calibrando = 'centro';
+    puntajeInfo.innerHTML = '👉 Tocá el <b>centro</b> del blanco.';
+  }
+});
+
 
 // ---------- IndexedDB: guardado local de rondas en el teléfono ----------
 let db = null;
@@ -871,6 +1094,9 @@ function handleFileObject(file) {
     srcMat = cv.imread(canvas);
     calibracion = null;
     calibrando = null;
+    calibrandoContornoTemp = [];
+    calibrandoRadiosTemp = [];
+    if (terminarContornoRow) terminarContornoRow.style.display = 'none';
     puntajeInfo.style.display = 'none';
 
     analizar();
@@ -956,20 +1182,60 @@ function analizar() {
   statusEl.textContent = '';
 }
 
+function dibujarPoligono(vertices, cerrado) {
+  if (!vertices.length) return;
+  ctx.beginPath();
+  ctx.moveTo(vertices[0].x, vertices[0].y);
+  for (let i = 1; i < vertices.length; i++) ctx.lineTo(vertices[i].x, vertices[i].y);
+  if (cerrado) ctx.closePath();
+  ctx.stroke();
+  vertices.forEach(v => {
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, 3, 0, 2 * Math.PI);
+    ctx.fill();
+  });
+}
+
 function redibujar() {
   cv.imshow(canvas, srcMat);
+  ctx.strokeStyle = '#ffd60a';
+  ctx.fillStyle = '#ffd60a';
+  ctx.lineWidth = 2;
 
-  if (calibracion) {
-    ctx.strokeStyle = '#ffd60a';
-    ctx.lineWidth = 2;
-    for (let pct = 1; pct <= 9; pct++) {
-      ctx.beginPath();
-      ctx.arc(calibracion.cx, calibracion.cy, calibracion.rOuter * pct / 10, 0, 2 * Math.PI);
-      ctx.stroke();
+  if (calibracion && calibracion.tipo === 'circulos') {
+    if (calibracion.geometria && calibracion.geometria.radios && calibracion.geometria.radios.length && calibracion.rOuter) {
+      calibracion.geometria.radios.forEach(frac => {
+        ctx.beginPath();
+        ctx.arc(calibracion.cx, calibracion.cy, calibracion.rOuter * frac, 0, 2 * Math.PI);
+        ctx.stroke();
+      });
     }
-    ctx.fillStyle = '#ffd60a';
     ctx.beginPath();
     ctx.arc(calibracion.cx, calibracion.cy, 4, 0, 2 * Math.PI);
+    ctx.fill();
+  }
+  // marcas intermedias mientras se calibra zona por zona (radios aún sin normalizar)
+  if (calibrando === 'anillo' && calibracion && calibrandoRadiosTemp.length) {
+    ctx.lineWidth = 1;
+    calibrandoRadiosTemp.forEach(r => {
+      ctx.beginPath();
+      ctx.arc(calibracion.cx, calibracion.cy, r, 0, 2 * Math.PI);
+      ctx.stroke();
+    });
+    ctx.lineWidth = 2;
+  }
+
+  // trazado del contorno mientras se está definiendo (diana nueva)
+  if (calibrando === 'contorno' && calibrandoContornoTemp.length) {
+    dibujarPoligono(calibrandoContornoTemp, false);
+  }
+  // contorno ya calibrado sobre la foto real (uso normal)
+  if (calibracion && calibracion.tipo === 'contorno' && calibracion.verticesReal) {
+    dibujarPoligono(calibracion.verticesReal, true);
+  }
+  if (calibracion && calibracion.tipo === 'contorno' && calibracion.p1 && !calibracion.p2) {
+    ctx.beginPath();
+    ctx.arc(calibracion.p1.x, calibracion.p1.y, 4, 0, 2 * Math.PI);
     ctx.fill();
   }
 
@@ -982,7 +1248,9 @@ function redibujar() {
     ctx.stroke();
     ctx.fillStyle = color;
     ctx.font = '14px sans-serif';
-    const etiqueta = d.puntaje != null ? `[${d.puntaje}]` : (i + 1);
+    let etiqueta = i + 1;
+    if (d.puntaje != null) etiqueta = `[${d.puntaje}]`;
+    else if (d.dentro != null) etiqueta = d.dentro ? '✓' : '✗';
     ctx.fillText(etiqueta, d.x + 14, d.y);
   });
   const nuevos = detecciones.filter(d => d.esNuevo !== false).length;
@@ -1023,14 +1291,63 @@ canvas.addEventListener('click', (e) => {
   const y = (e.clientY - rect.top) * scaleY;
 
   if (calibrando === 'centro') {
-    calibracion = { cx: x, cy: y, rOuter: 0 };
-    calibrando = 'borde';
-    puntajeInfo.innerHTML = '👉 Ahora tocá el <b>borde exterior del anillo 1</b>.';
+    if (calibrandoModoGeometria) {
+      calibracion = { tipo: 'circulos', cx: x, cy: y, rOuter: 0, geometria: { zonas: calibrandoZonasObjetivo, radios: [] } };
+      calibrandoRadiosTemp = [];
+      calibrando = 'anillo';
+      puntajeInfo.innerHTML = `👉 Tocá el borde de la zona <b>${calibrandoZonasObjetivo}</b> (la de más adentro, vale más puntos).`;
+    } else {
+      calibracion.cx = x; calibracion.cy = y; calibracion.rOuter = 0;
+      calibrando = 'borde';
+      puntajeInfo.innerHTML = '👉 Ahora tocá el <b>borde exterior</b> (la última zona, la que menos puntos vale).';
+    }
     redibujar();
     return;
   }
   if (calibrando === 'borde') {
     calibracion.rOuter = Math.hypot(x - calibracion.cx, y - calibracion.cy);
+    calibrando = null;
+    calcularPuntajes();
+    redibujar();
+    return;
+  }
+  if (calibrando === 'anillo') {
+    const dist = Math.hypot(x - calibracion.cx, y - calibracion.cy);
+    calibrandoRadiosTemp.push(dist);
+    const restantes = calibrandoZonasObjetivo - calibrandoRadiosTemp.length;
+    if (restantes > 0) {
+      puntajeInfo.innerHTML = `👉 Tocá el borde de la zona <b>${restantes}</b>.`;
+      redibujar();
+      return;
+    }
+    const rOuter = calibrandoRadiosTemp[calibrandoRadiosTemp.length - 1];
+    calibracion.rOuter = rOuter;
+    calibracion.geometria.radios = calibrandoRadiosTemp.map(r => r / rOuter);
+    calibrando = null;
+    calcularPuntajes();
+    redibujar();
+    return;
+  }
+  if (calibrando === 'contorno') {
+    calibrandoContornoTemp.push({ x, y });
+    contornoEstado.textContent = `${calibrandoContornoTemp.length} puntos trazados. Seguí tocando el borde, o "Terminar" si ya alcanza.`;
+    if (calibrandoContornoTemp.length >= 3) terminarContornoRow.style.display = 'flex';
+    redibujar();
+    return;
+  }
+  if (calibrando === 'contornoP1') {
+    calibracion.p1 = { x, y };
+    calibrando = 'contornoP2';
+    puntajeInfo.innerHTML = '👉 Ahora tocá la <b>esquina inferior-derecha</b> del área de la zona.';
+    redibujar();
+    return;
+  }
+  if (calibrando === 'contornoP2') {
+    calibracion.p2 = { x, y };
+    calibracion.verticesReal = calibracion.vertices.map(v => ({
+      x: calibracion.p1.x + v.xf * (calibracion.p2.x - calibracion.p1.x),
+      y: calibracion.p1.y + v.yf * (calibracion.p2.y - calibracion.p1.y),
+    }));
     calibrando = null;
     calcularPuntajes();
     redibujar();
