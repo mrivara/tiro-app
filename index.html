@@ -112,10 +112,11 @@
       <div class="slider-row">
         <label>Distancia</label>
         <select id="distanciaSelect">
+          <option value="5" selected>5 metros</option>
           <option value="10">10 metros</option>
           <option value="15">15 metros</option>
           <option value="20">20 metros</option>
-          <option value="25" selected>25 metros</option>
+          <option value="25">25 metros</option>
           <option value="30">30 metros</option>
         </select>
       </div>
@@ -163,7 +164,16 @@
     </div>
 
     <div id="canvasWrap">
-      <canvas id="canvas"></canvas>
+      <div class="row" id="zoomControls" style="margin-bottom:8px;">
+        <label class="btn secondary" id="zoomOut" style="flex:0 0 50px;">➖</label>
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:#2c2c2e; border-radius:12px; font-size:14px; color:#999;">
+          🔍 <span id="zoomLabel">100%</span>
+        </div>
+        <label class="btn secondary" id="zoomIn" style="flex:0 0 50px;">➕</label>
+      </div>
+      <div id="canvasScroll" style="overflow:auto; max-height:70vh; border-radius:12px;">
+        <canvas id="canvas"></canvas>
+      </div>
     </div>
 
     <div class="panel" id="resultPanel" style="display:none;">
@@ -172,9 +182,18 @@
       <div class="controls" id="controls">
         <p class="hint">
           <span class="step-badge">2</span>
-          Tocá un círculo rojo para <b>borrarlo</b> (falso positivo).
+          Tocá un círculo para <b>borrarlo</b> (falso positivo).
           Tocá en cualquier otro punto del blanco para <b>agregar</b> uno.
         </p>
+
+        <div class="slider-row">
+          <label>Modo de edición al tocar la foto</label>
+          <div class="row">
+            <label class="btn secondary" id="modoEditarBtn" style="flex:1; font-size:13px;">✏️ Agregar / borrar</label>
+            <label class="btn secondary" id="modoMarcarBtn" style="flex:1; font-size:13px;">🔁 Marcar previo / nuevo</label>
+          </div>
+          <p class="hint" id="modoEdicionHint">Tocá un impacto para borrarlo, o un punto vacío para agregar uno.</p>
+        </div>
 
         <div class="slider-row">
           <label>Tipo de blanco</label>
@@ -520,6 +539,13 @@ const sliderHough = document.getElementById('sliderHough');
 const sliderBlanco = document.getElementById('sliderBlanco');
 const modeHoughBtn = document.getElementById('modeHough');
 const modeBlancoBtn = document.getElementById('modeBlanco');
+const modoEditarBtn = document.getElementById('modoEditarBtn');
+const modoMarcarBtn = document.getElementById('modoMarcarBtn');
+const modoEdicionHint = document.getElementById('modoEdicionHint');
+const canvasScroll = document.getElementById('canvasScroll');
+const zoomInBtn = document.getElementById('zoomIn');
+const zoomOutBtn = document.getElementById('zoomOut');
+const zoomLabel = document.getElementById('zoomLabel');
 const sesionPanel = document.getElementById('sesionPanel');
 const fechaInput = document.getElementById('fechaInput');
 const comparacionInfo = document.getElementById('comparacionInfo');
@@ -750,6 +776,8 @@ function handleFileObject(file) {
     resultPanel.style.display = 'block';
     controls.style.display = 'block';
     sesionPanel.style.display = 'block';
+    zoomPct = 100;
+    aplicarZoom();
 
     if (srcMat) srcMat.delete();
     srcMat = cv.imread(canvas);
@@ -876,6 +904,29 @@ function redibujar() {
     : `${detecciones.length} <span>impactos detectados</span>`;
 }
 
+// ---------- zoom del canvas (para tocar impactos con más precisión) ----------
+let zoomPct = 100;
+function aplicarZoom() {
+  canvas.style.width = zoomPct + '%';
+  zoomLabel.textContent = zoomPct + '%';
+}
+zoomInBtn.addEventListener('click', () => { zoomPct = Math.min(300, zoomPct + 25); aplicarZoom(); });
+zoomOutBtn.addEventListener('click', () => { zoomPct = Math.max(100, zoomPct - 25); aplicarZoom(); });
+
+// ---------- modo de edición: agregar/borrar vs marcar previo/nuevo ----------
+let modoEdicion = 'editar'; // 'editar' | 'marcar'
+function setModoEdicion(m) {
+  modoEdicion = m;
+  modoEditarBtn.style.background = m === 'editar' ? '#0a84ff' : '#2c2c2e';
+  modoMarcarBtn.style.background = m === 'marcar' ? '#0a84ff' : '#2c2c2e';
+  modoEdicionHint.textContent = m === 'editar'
+    ? 'Tocá un impacto para borrarlo, o un punto vacío para agregar uno.'
+    : 'Tocá un impacto para alternar entre 🟢 nuevo y ⚪ ya existía (útil si estaba tapado y no lo comparó bien).';
+}
+modoEditarBtn.addEventListener('click', () => setModoEdicion('editar'));
+modoMarcarBtn.addEventListener('click', () => setModoEdicion('marcar'));
+setModoEdicion('editar');
+
 canvas.addEventListener('click', (e) => {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -899,8 +950,14 @@ canvas.addEventListener('click', (e) => {
   }
 
   const idx = detecciones.findIndex(d => Math.hypot(d.x - x, d.y - y) < Math.max(d.r + 6, 18));
-  if (idx >= 0) detecciones.splice(idx, 1);
-  else detecciones.push({ x, y, r: 10, esNuevo: true });
+
+  if (modoEdicion === 'marcar') {
+    if (idx >= 0) detecciones[idx].esNuevo = !(detecciones[idx].esNuevo !== false);
+    // en modo "marcar" no se agrega ni se borra tocando espacio vacío
+  } else {
+    if (idx >= 0) detecciones.splice(idx, 1);
+    else detecciones.push({ x, y, r: 10, esNuevo: true });
+  }
   if (calibracion) calcularPuntajes();
   redibujar();
 });
