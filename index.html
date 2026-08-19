@@ -351,10 +351,7 @@ sb.auth.getSession().then(({ data }) => {
 // BANCO DE DIANAS: presets fijos + los guardados en Supabase
 // ============================================================
 const PRESETS_FIJOS = {
-  issf:   { nombre: 'ISSF 25m (con anillos + círculo negro)', modo: 'hough', param2: 14, radio: 17 },
-  liso:   { nombre: 'Papel blanco liso', modo: 'blanco', thresh: 100, circ: 45 },
-  lineas: { nombre: 'Papel blanco con líneas finas', modo: 'blanco', thresh: 90, circ: 55 },
-  custom: { nombre: 'Personalizada (ajustar sliders a mano)', modo: 'hough' },
+  custom: { nombre: 'Personalizada (ajustar sliders a mano)' },
 };
 
 let dianasNube = []; // filas de la tabla "dianas" visibles para este usuario
