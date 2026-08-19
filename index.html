@@ -30,7 +30,8 @@
   }
   input[readonly] { color: #999; }
   #canvasWrap { position: relative; margin-top: 16px; display: none; }
-  canvas { width: 100%; border-radius: 12px; display: block; touch-action: none; }
+  canvas { width: 100%; border-radius: 12px; display: block; touch-action: pan-x pan-y; }
+  #canvasScroll { -webkit-overflow-scrolling: touch; }
   #status { font-size: 13px; color: #0a84ff; margin-top: 10px; min-height: 18px; }
   #count { font-size: 34px; font-weight: 700; text-align: center; margin: 6px 0 0; }
   #count span { font-size: 15px; color: #999; font-weight: 400; display: block; }
