@@ -16,19 +16,23 @@
     background: #1c1c1e; border-radius: 14px; padding: 16px; margin-bottom: 16px;
   }
   .row { display: flex; gap: 10px; }
-  label.btn {
+  label.btn, button.btn {
     flex: 1; display: flex; align-items: center; justify-content: center;
     background: #0a84ff; color: #fff; padding: 14px; border-radius: 12px;
     font-size: 16px; font-weight: 600; text-align: center; cursor: pointer;
+    border: none; font-family: inherit;
   }
-  label.btn.secondary { background: #2c2c2e; }
+  label.btn.secondary, button.btn.secondary { background: #2c2c2e; }
   input[type=file] { display: none; }
+  input[type=text], input[type=password], input[type=date], select {
+    width: 100%; padding: 10px; border-radius: 8px; border: none;
+    background: #2c2c2e; color: #fff; font-size: 15px; font-family: inherit;
+  }
+  input[readonly] { color: #999; }
   #canvasWrap { position: relative; margin-top: 16px; display: none; }
   canvas { width: 100%; border-radius: 12px; display: block; touch-action: none; }
   #status { font-size: 13px; color: #0a84ff; margin-top: 10px; min-height: 18px; }
-  #count {
-    font-size: 34px; font-weight: 700; text-align: center; margin: 6px 0 0;
-  }
+  #count { font-size: 34px; font-weight: 700; text-align: center; margin: 6px 0 0; }
   #count span { font-size: 15px; color: #999; font-weight: 400; display: block; }
   .controls { display: none; margin-top: 12px; }
   .controls .row { margin-top: 8px; }
@@ -41,154 +45,464 @@
     border-radius: 20px; width: 20px; height: 20px; line-height: 20px;
     text-align: center; font-size: 12px; font-weight: 700; margin-right: 6px;
   }
+  #loginGate {
+    max-width: 360px; margin: 60px auto 0; text-align: center;
+  }
+  #loginError { color: #ff453a; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .diana-item {
+    padding: 10px 0; border-top: 1px solid #2c2c2e; font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 6px; margin-left: 6px;
+  }
+  .badge.publica { background: #0a84ff33; color: #64b5ff; }
+  .badge.propia { background: #34c75933; color: #34c759; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
+  .topbar span { font-size: 13px; color: #999; }
+  .topbar a { color: #ff453a; font-size: 13px; text-decoration: none; }
 </style>
 </head>
 <body>
 
-  <h1>🎯 Contador de Impactos</h1>
-  <p class="sub">Prototipo — corre 100% en tu teléfono, sin subir nada a internet</p>
-
-  <div class="panel">
-    <span class="step-badge">0</span><b>Datos de la sesión</b>
-    <div class="slider-row">
-      <label>Tirador</label>
-      <input type="text" id="tiradorInput" placeholder="Nombre" style="width:100%; padding:10px; border-radius:8px; border:none; background:#2c2c2e; color:#fff; font-size:15px;">
-    </div>
-    <div class="slider-row">
-      <label>Diana</label>
-      <select id="dianaSelect" style="width:100%; padding:10px; border-radius:8px; border:none; background:#2c2c2e; color:#fff; font-size:15px;">
-        <option value="issf">ISSF 25m (con anillos + círculo negro)</option>
-        <option value="protarget">ProTarget (con puntaje por anillos)</option>
-        <option value="liso">Papel blanco liso</option>
-        <option value="lineas">Papel blanco con líneas finas</option>
-        <option value="custom">Personalizada (ajustar sliders a mano)</option>
-      </select>
-    </div>
-    <div class="slider-row">
-      <label>Distancia</label>
-      <select id="distanciaSelect" style="width:100%; padding:10px; border-radius:8px; border:none; background:#2c2c2e; color:#fff; font-size:15px;">
-        <option value="10">10 metros</option>
-        <option value="15">15 metros</option>
-        <option value="20">20 metros</option>
-        <option value="25" selected>25 metros</option>
-        <option value="30">30 metros</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="panel">
-    <span class="step-badge">1</span><b>Foto del blanco</b>
-    <div class="row" style="margin-top:12px;">
-      <label class="btn">
-        📷 Sacar foto
-        <input type="file" accept="image/*" capture="environment" id="fileCamera">
-      </label>
-      <label class="btn secondary">
-        🖼️ Subir foto
-        <input type="file" accept="image/*" id="fileUpload">
-      </label>
-    </div>
-    <div id="status"></div>
-  </div>
-
-  <div id="canvasWrap">
-    <canvas id="canvas"></canvas>
-  </div>
-
-  <div class="panel" id="resultPanel" style="display:none;">
-    <div id="count">-- <span>impactos detectados</span></div>
-
-    <div class="controls" id="controls">
-      <p class="hint">
-        <span class="step-badge">2</span>
-        Tocá un círculo rojo para <b>borrarlo</b> (falso positivo).
-        Tocá en cualquier otro punto del blanco para <b>agregar</b> uno.
-      </p>
-
+  <!-- ============== PANTALLA DE LOGIN ============== -->
+  <div id="loginGate">
+    <h1>🎯 Contador de Impactos</h1>
+    <p class="sub">Iniciá sesión para continuar</p>
+    <div class="panel">
       <div class="slider-row">
-        <label>Tipo de blanco</label>
-        <div class="row">
-          <label class="btn secondary" id="modeHough" style="flex:1;">⚫ Con anillos / círculo negro</label>
-          <label class="btn secondary" id="modeBlanco" style="flex:1;">⬜ Papel blanco liso</label>
-        </div>
+        <label>Usuario</label>
+        <input type="text" id="loginUsuario" autocapitalize="off" autocorrect="off" placeholder="usuario">
       </div>
-
-      <div id="sliderHough">
-        <div class="slider-row">
-          <label>Sensibilidad (más bajo = detecta más, pero más falsos positivos)</label>
-          <input type="range" id="param2Slider" min="8" max="25" value="14">
-        </div>
-        <div class="slider-row">
-          <label>Radio máximo del agujero (ajustá al tamaño real en la foto)</label>
-          <input type="range" id="radioSlider" min="8" max="35" value="17">
-        </div>
+      <div class="slider-row">
+        <label>Contraseña</label>
+        <input type="password" id="loginPassword" placeholder="contraseña">
       </div>
-
-      <div id="sliderBlanco" style="display:none;">
-        <div class="slider-row">
-          <label>Sensibilidad del umbral (más alto = más estricto)</label>
-          <input type="range" id="threshSlider" min="40" max="160" value="100">
-        </div>
-        <div class="slider-row">
-          <label>Circularidad mínima (más alto = solo formas bien redondas)</label>
-          <input type="range" id="circSlider" min="20" max="90" value="45">
-        </div>
-      </div>
-
       <div class="row" style="margin-top:14px;">
-        <label class="btn secondary" id="reanalizar">🔄 Re-analizar</label>
-        <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
+        <button class="btn" id="loginBtn">Ingresar</button>
+      </div>
+      <div id="loginError"></div>
+    </div>
+  </div>
+
+  <!-- ============== APP (oculta hasta loguearse) ============== -->
+  <div id="appContent" style="display:none;">
+
+    <div class="topbar">
+      <span>👤 <b id="usuarioActual"></b> <span id="rolBadge"></span></span>
+      <a href="#" id="logoutBtn">Cerrar sesión</a>
+    </div>
+
+    <h1>🎯 Contador de Impactos</h1>
+    <p class="sub">Corre en tu teléfono — solo las fotos y coordenadas suben a tu cuenta</p>
+
+    <div class="panel">
+      <span class="step-badge">0</span><b>Datos de la sesión</b>
+      <div class="slider-row">
+        <label>Tirador</label>
+        <input type="text" id="tiradorInput" readonly>
+      </div>
+      <div class="slider-row">
+        <label>Diana</label>
+        <select id="dianaSelect"></select>
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <label class="btn secondary" id="abrirAgregarDiana" style="font-size:13px;">➕ Agregar diana de referencia</label>
+      </div>
+      <div class="slider-row">
+        <label>Distancia</label>
+        <select id="distanciaSelect">
+          <option value="10">10 metros</option>
+          <option value="15">15 metros</option>
+          <option value="20">20 metros</option>
+          <option value="25" selected>25 metros</option>
+          <option value="30">30 metros</option>
+        </select>
       </div>
     </div>
-  </div>
 
-  <p class="hint">
-    "Con anillos / círculo negro" sirve para blancos impresos tipo ISSF
-    (usa detección de círculos, funciona con impactos sobre fondo negro o
-    blanco). "Papel blanco liso" es más simple y preciso, pero solo anda
-    bien si no hay ningún círculo negro grande en la foto.
-  </p>
+    <!-- ============== PANEL: agregar diana nueva ============== -->
+    <div class="panel" id="agregarDianaPanel" style="display:none;">
+      <b>➕ Nueva diana de referencia</b>
+      <p class="hint">
+        Subí una foto limpia del blanco (sin impactos, o con pocos),
+        ajustá los valores de detección mirando el resultado, y guardala
+        con un nombre. Va a quedar disponible en el selector de arriba
+        la próxima vez.
+      </p>
+      <div class="slider-row">
+        <label>Nombre de la diana</label>
+        <input type="text" id="nuevaDianaNombre" placeholder="Ej: ProTarget 25m">
+      </div>
+      <div class="row" style="margin-top:8px;">
+        <label class="btn secondary">
+          🖼️ Elegir foto de referencia
+          <input type="file" accept="image/*" id="nuevaDianaFoto">
+        </label>
+      </div>
+      <div id="nuevaDianaEstado" class="hint"></div>
+      <div class="row" style="margin-top:12px;">
+        <label class="btn secondary" id="cancelarAgregarDiana">Cancelar</label>
+        <button class="btn" id="guardarNuevaDiana">💾 Guardar diana</button>
+      </div>
+    </div>
 
-  <div class="panel" id="puntajePanel" style="display:none;">
-    <b>🎯 Puntaje (ProTarget)</b>
+    <div class="panel">
+      <span class="step-badge">1</span><b>Foto del blanco</b>
+      <div class="row" style="margin-top:12px;">
+        <label class="btn">
+          📷 Sacar foto
+          <input type="file" accept="image/*" capture="environment" id="fileCamera">
+        </label>
+        <label class="btn secondary">
+          🖼️ Subir foto
+          <input type="file" accept="image/*" id="fileUpload">
+        </label>
+      </div>
+      <div id="status"></div>
+    </div>
+
+    <div id="canvasWrap">
+      <canvas id="canvas"></canvas>
+    </div>
+
+    <div class="panel" id="resultPanel" style="display:none;">
+      <div id="count">-- <span>impactos detectados</span></div>
+
+      <div class="controls" id="controls">
+        <p class="hint">
+          <span class="step-badge">2</span>
+          Tocá un círculo rojo para <b>borrarlo</b> (falso positivo).
+          Tocá en cualquier otro punto del blanco para <b>agregar</b> uno.
+        </p>
+
+        <div class="slider-row">
+          <label>Tipo de blanco</label>
+          <div class="row">
+            <label class="btn secondary" id="modeHough" style="flex:1;">⚫ Con anillos / círculo negro</label>
+            <label class="btn secondary" id="modeBlanco" style="flex:1;">⬜ Papel blanco liso</label>
+          </div>
+        </div>
+
+        <div id="sliderHough">
+          <div class="slider-row">
+            <label>Sensibilidad (más bajo = detecta más, pero más falsos positivos)</label>
+            <input type="range" id="param2Slider" min="8" max="25" value="14">
+          </div>
+          <div class="slider-row">
+            <label>Radio máximo del agujero (ajustá al tamaño real en la foto)</label>
+            <input type="range" id="radioSlider" min="8" max="35" value="17">
+          </div>
+        </div>
+
+        <div id="sliderBlanco" style="display:none;">
+          <div class="slider-row">
+            <label>Sensibilidad del umbral (más alto = más estricto)</label>
+            <input type="range" id="threshSlider" min="40" max="160" value="100">
+          </div>
+          <div class="slider-row">
+            <label>Circularidad mínima (más alto = solo formas bien redondas)</label>
+            <input type="range" id="circSlider" min="20" max="90" value="45">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:14px;">
+          <label class="btn secondary" id="reanalizar">🔄 Re-analizar</label>
+          <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
+        </div>
+      </div>
+    </div>
+
     <p class="hint">
-      Tocá <b>el centro exacto</b> del blanco, y después tocá <b>el borde
-      exterior del anillo 1</b> (el círculo más grande). Con esos dos
-      toques calcula el puntaje de cada impacto.
+      "Con anillos / círculo negro" sirve para blancos impresos tipo ISSF
+      (usa detección de círculos, funciona con impactos sobre fondo negro o
+      blanco). "Papel blanco liso" es más simple y preciso, pero solo anda
+      bien si no hay ningún círculo negro grande en la foto.
     </p>
-    <div class="row">
-      <label class="btn secondary" id="calibrarBtn">📍 Calibrar centro y borde</label>
+
+    <div class="panel" id="puntajePanel" style="display:none;">
+      <b>🎯 Puntaje</b>
+      <p class="hint">
+        Tocá <b>el centro exacto</b> del blanco, y después tocá <b>el borde
+        exterior del anillo 1</b> (el círculo más grande). Con esos dos
+        toques calcula el puntaje de cada impacto (fórmula: cada anillo
+        es 10% del radio exterior, de 9 en el centro a 1 en el borde).
+      </p>
+      <div class="row">
+        <label class="btn secondary" id="calibrarBtn">📍 Calibrar centro y borde</label>
+      </div>
+      <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
     </div>
-    <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
+
+    <div class="panel" id="sesionPanel" style="display:none;">
+      <b>📋 Sesión</b>
+      <div class="slider-row">
+        <label>Fecha de esta ronda</label>
+        <input type="date" id="fechaInput">
+      </div>
+      <div id="comparacionInfo" class="hint" style="display:none;"></div>
+      <div class="row" style="margin-top:12px;">
+        <label class="btn" id="guardarRonda">💾 Guardar esta ronda</label>
+      </div>
+      <div id="listaRondas" style="margin-top:14px;"></div>
+      <div class="row" style="margin-top:10px;">
+        <label class="btn secondary" id="reiniciarSesion" style="font-size:13px;">🗑️ Reiniciar sesión (borra todas las rondas guardadas en este teléfono)</label>
+      </div>
+    </div>
+
+    <p class="hint">
+      <b>Importante:</b> la comparación "nuevo vs. ya existía" entre rondas
+      se hace por coordenadas en la foto. Para que funcione bien, sacá todas
+      las fotos de la sesión <b>desde la misma posición</b> (por eso el
+      trípode/monóculo fijo ayuda tanto) — si el encuadre cambia mucho entre
+      fotos, la comparación se desalinea.
+    </p>
+
   </div>
 
-  <div class="panel" id="sesionPanel" style="display:none;">
-    <b>📋 Sesión</b>
-    <div class="slider-row">
-      <label>Fecha de esta ronda</label>
-      <input type="date" id="fechaInput" style="width:100%; padding:10px; border-radius:8px; border:none; background:#2c2c2e; color:#fff; font-size:15px;">
-    </div>
-    <div id="comparacionInfo" class="hint" style="display:none;"></div>
-    <div class="row" style="margin-top:12px;">
-      <label class="btn" id="guardarRonda">💾 Guardar esta ronda</label>
-    </div>
-    <div id="listaRondas" style="margin-top:14px;"></div>
-    <div class="row" style="margin-top:10px;">
-      <label class="btn secondary" id="reiniciarSesion" style="font-size:13px;">🗑️ Reiniciar sesión (borra todas las rondas guardadas)</label>
-    </div>
-  </div>
-
-  <p class="hint">
-    <b>Importante:</b> la comparación "nuevo vs. ya existía" entre rondas
-    se hace por coordenadas en la foto. Para que funcione bien, sacá todas
-    las fotos de la sesión <b>desde la misma posición</b> (por eso el
-    trípode/monóculo fijo ayuda tanto) — si el encuadre cambia mucho entre
-    fotos, la comparación se desalinea. Más adelante sumamos un paso de
-    recorte a 4 esquinas para que esto sea más robusto.
-  </p>
-
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://docs.opencv.org/4.9.0/opencv.js" type="text/javascript"></script>
 <script>
+// ============================================================
+// CONFIGURACIÓN DE SUPABASE
+// ============================================================
+const SUPABASE_URL = 'https://dzrqcdupvnsvgqnjkean.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_4Bu5aR46aO7rD6Pk1XFqzw_5k2SoX5o';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const DOMINIO_USUARIO = '@tiroapp.local'; // el login es "usuario", por dentro se usa como email
+
+let sesionActual = null;   // sesión de Supabase Auth
+let perfilActual = null;   // {username, role}
+
+// ---------- referencias DOM: login ----------
+const loginGate = document.getElementById('loginGate');
+const appContent = document.getElementById('appContent');
+const loginUsuario = document.getElementById('loginUsuario');
+const loginPassword = document.getElementById('loginPassword');
+const loginBtn = document.getElementById('loginBtn');
+const loginError = document.getElementById('loginError');
+const usuarioActualEl = document.getElementById('usuarioActual');
+const rolBadgeEl = document.getElementById('rolBadge');
+const logoutBtn = document.getElementById('logoutBtn');
+
+async function intentarLogin() {
+  const usuario = loginUsuario.value.trim().toLowerCase();
+  const password = loginPassword.value;
+  if (!usuario || !password) {
+    loginError.textContent = 'Completá usuario y contraseña.';
+    return;
+  }
+  loginBtn.textContent = 'Ingresando...';
+  const { data, error } = await sb.auth.signInWithPassword({
+    email: usuario + DOMINIO_USUARIO,
+    password,
+  });
+  loginBtn.textContent = 'Ingresar';
+  if (error) {
+    loginError.textContent = 'Usuario o contraseña incorrectos.';
+    return;
+  }
+  await onLoginExitoso(data.session);
+}
+
+loginBtn.addEventListener('click', intentarLogin);
+loginPassword.addEventListener('keydown', (e) => { if (e.key === 'Enter') intentarLogin(); });
+
+logoutBtn.addEventListener('click', async (e) => {
+  e.preventDefault();
+  await sb.auth.signOut();
+  location.reload();
+});
+
+async function onLoginExitoso(session) {
+  sesionActual = session;
+  const { data: perfil, error } = await sb
+    .from('profiles')
+    .select('username, role')
+    .eq('id', session.user.id)
+    .single();
+
+  if (error || !perfil) {
+    loginError.textContent = 'Tu usuario no tiene perfil creado todavía. Avisale al admin.';
+    await sb.auth.signOut();
+    return;
+  }
+  perfilActual = perfil;
+  usuarioActualEl.textContent = perfil.username;
+  rolBadgeEl.innerHTML = perfil.role === 'admin'
+    ? '<span class="badge publica">admin</span>'
+    : '<span class="badge propia">usuario</span>';
+
+  loginGate.style.display = 'none';
+  appContent.style.display = 'block';
+
+  tiradorInput.value = perfil.username; // el tirador queda atado a la cuenta logueada
+
+  await cargarDianasDesdeSupabase();
+  abrirDB().then(refrescarRondas);
+}
+
+// al cargar la página, si ya había sesión guardada, entrar directo
+sb.auth.getSession().then(({ data }) => {
+  if (data.session) onLoginExitoso(data.session);
+});
+
+// ============================================================
+// BANCO DE DIANAS: presets fijos + los guardados en Supabase
+// ============================================================
+const PRESETS_FIJOS = {
+  issf:   { nombre: 'ISSF 25m (con anillos + círculo negro)', modo: 'hough', param2: 14, radio: 17 },
+  liso:   { nombre: 'Papel blanco liso', modo: 'blanco', thresh: 100, circ: 45 },
+  lineas: { nombre: 'Papel blanco con líneas finas', modo: 'blanco', thresh: 90, circ: 55 },
+  custom: { nombre: 'Personalizada (ajustar sliders a mano)', modo: 'hough' },
+};
+
+let dianasNube = []; // filas de la tabla "dianas" visibles para este usuario
+
+async function cargarDianasDesdeSupabase() {
+  const { data, error } = await sb.from('dianas').select('*').order('nombre');
+  if (error) { console.error(error); dianasNube = []; }
+  else dianasNube = data;
+  renderDianaSelect();
+}
+
+function renderDianaSelect() {
+  const seleccionPrevia = dianaSelect.value;
+  dianaSelect.innerHTML = '';
+
+  const grupoFijos = document.createElement('optgroup');
+  grupoFijos.label = 'Presets básicos';
+  Object.entries(PRESETS_FIJOS).forEach(([id, p]) => {
+    const opt = document.createElement('option');
+    opt.value = 'preset:' + id;
+    opt.textContent = p.nombre;
+    grupoFijos.appendChild(opt);
+  });
+  dianaSelect.appendChild(grupoFijos);
+
+  if (dianasNube.length) {
+    const grupoNube = document.createElement('optgroup');
+    grupoNube.label = 'Mis dianas / del club';
+    dianasNube.forEach(d => {
+      const opt = document.createElement('option');
+      opt.value = 'nube:' + d.id;
+      const propia = d.owner_id === sesionActual.user.id;
+      opt.textContent = d.nombre + (d.es_publica && !propia ? ' (club)' : '');
+      grupoNube.appendChild(opt);
+    });
+    dianaSelect.appendChild(grupoNube);
+  }
+
+  if (seleccionPrevia && [...dianaSelect.options].some(o => o.value === seleccionPrevia)) {
+    dianaSelect.value = seleccionPrevia;
+  }
+}
+
+function presetActual() {
+  const val = dianaSelect.value;
+  if (val.startsWith('preset:')) {
+    return PRESETS_FIJOS[val.slice(7)];
+  }
+  if (val.startsWith('nube:')) {
+    const id = val.slice(5);
+    const d = dianasNube.find(x => x.id === id);
+    if (!d) return null;
+    return {
+      nombre: d.nombre, modo: d.modo, param2: d.param2, radio: d.radio,
+      thresh: d.thresh, circ: d.circ, puntaje: d.puntaje,
+    };
+  }
+  return null;
+}
+
+const dianaSelect = document.getElementById('dianaSelect');
+dianaSelect.addEventListener('change', () => {
+  const preset = presetActual();
+  puntajePanel.style.display = (preset && preset.puntaje) ? 'block' : 'none';
+  if (!(preset && preset.puntaje)) { calibracion = null; puntajeInfo.style.display = 'none'; }
+  if (!preset || !preset.modo) return;
+  setModo(preset.modo);
+  if (preset.modo === 'hough') {
+    if (preset.param2) param2Slider.value = preset.param2;
+    if (preset.radio) radioSlider.value = preset.radio;
+  } else {
+    if (preset.thresh) threshSlider.value = preset.thresh;
+    if (preset.circ) circSlider.value = preset.circ;
+  }
+  if (srcMat) analizar();
+});
+
+// ============================================================
+// PANEL: agregar diana nueva (foto de referencia + calibración)
+// ============================================================
+const agregarDianaPanel = document.getElementById('agregarDianaPanel');
+const nuevaDianaNombre = document.getElementById('nuevaDianaNombre');
+const nuevaDianaFoto = document.getElementById('nuevaDianaFoto');
+const nuevaDianaEstado = document.getElementById('nuevaDianaEstado');
+let nuevaDianaArchivo = null;
+
+document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
+  agregarDianaPanel.style.display = 'block';
+  agregarDianaPanel.scrollIntoView({ behavior: 'smooth' });
+});
+document.getElementById('cancelarAgregarDiana').addEventListener('click', () => {
+  agregarDianaPanel.style.display = 'none';
+});
+
+nuevaDianaFoto.addEventListener('change', (e) => {
+  nuevaDianaArchivo = e.target.files[0] || null;
+  if (nuevaDianaArchivo) {
+    // la usamos también como la foto "de trabajo" para poder ajustar
+    // los sliders mirando el resultado en vivo, antes de guardar
+    handleFileObject(nuevaDianaArchivo);
+    nuevaDianaEstado.textContent = 'Foto cargada — ajustá los sliders de abajo hasta que la detección se vea bien, después guardá.';
+  }
+});
+
+document.getElementById('guardarNuevaDiana').addEventListener('click', async () => {
+  const nombre = nuevaDianaNombre.value.trim();
+  if (!nombre) { nuevaDianaEstado.textContent = 'Ponele un nombre a la diana.'; return; }
+
+  nuevaDianaEstado.textContent = 'Guardando...';
+  let imagenPath = null;
+
+  if (nuevaDianaArchivo) {
+    const ext = nuevaDianaArchivo.name.split('.').pop();
+    imagenPath = `${sesionActual.user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await sb.storage.from('dianas').upload(imagenPath, nuevaDianaArchivo);
+    if (upErr) {
+      nuevaDianaEstado.textContent = 'Error subiendo la foto: ' + upErr.message;
+      return;
+    }
+  }
+
+  const registro = {
+    owner_id: sesionActual.user.id,
+    nombre,
+    modo,
+    param2: modo === 'hough' ? parseInt(param2Slider.value, 10) : null,
+    radio: modo === 'hough' ? parseInt(radioSlider.value, 10) : null,
+    thresh: modo === 'blanco' ? parseInt(threshSlider.value, 10) : null,
+    circ: modo === 'blanco' ? parseInt(circSlider.value, 10) : null,
+    puntaje: !!calibracion,
+    imagen_path: imagenPath,
+  };
+
+  const { error } = await sb.from('dianas').insert(registro);
+  if (error) {
+    nuevaDianaEstado.textContent = 'Error guardando: ' + error.message;
+    return;
+  }
+  nuevaDianaEstado.textContent = 'Diana guardada ✔';
+  nuevaDianaNombre.value = '';
+  nuevaDianaArchivo = null;
+  await cargarDianasDesdeSupabase();
+  setTimeout(() => { agregarDianaPanel.style.display = 'none'; nuevaDianaEstado.textContent = ''; }, 1500);
+});
+
+// ============================================================
+// DETECCIÓN DE IMPACTOS (OpenCV.js)
+// ============================================================
 let cvReady = false;
 let srcMat = null;         // imagen original cargada (RGBA)
 let detecciones = [];      // [{x,y,r,esNuevo}]
@@ -214,35 +528,9 @@ const fechaInput = document.getElementById('fechaInput');
 const comparacionInfo = document.getElementById('comparacionInfo');
 const listaRondas = document.getElementById('listaRondas');
 const tiradorInput = document.getElementById('tiradorInput');
-const dianaSelect = document.getElementById('dianaSelect');
 const distanciaSelect = document.getElementById('distanciaSelect');
 
-// ---------- banco de dianas: preajusta modo + sliders al elegir ----------
-const BANCO_DIANAS = {
-  issf:      { modo: 'hough', param2: 14, radio: 17 },
-  protarget: { modo: 'hough', param2: 14, radio: 17, puntaje: true },
-  liso:      { modo: 'blanco', thresh: 100, circ: 45 },
-  lineas:    { modo: 'blanco', thresh: 90,  circ: 55 },
-  custom:    null, // no toca nada, el usuario ajusta a mano
-};
-
-dianaSelect.addEventListener('change', () => {
-  const preset = BANCO_DIANAS[dianaSelect.value];
-  puntajePanel.style.display = (preset && preset.puntaje) ? 'block' : 'none';
-  if (!(preset && preset.puntaje)) { calibracion = null; puntajeInfo.style.display = 'none'; }
-  if (!preset) { redibujar(); return; }
-  setModo(preset.modo);
-  if (preset.modo === 'hough') {
-    param2Slider.value = preset.param2;
-    radioSlider.value = preset.radio;
-  } else {
-    threshSlider.value = preset.thresh;
-    circSlider.value = preset.circ;
-  }
-  if (srcMat) analizar();
-});
-
-// ---------- puntaje (ProTarget): centro + radio exterior calibrados a mano ----------
+// ---------- puntaje: centro + radio exterior calibrados a mano ----------
 const puntajePanel = document.getElementById('puntajePanel');
 const calibrarBtn = document.getElementById('calibrarBtn');
 const puntajeInfo = document.getElementById('puntajeInfo');
@@ -275,8 +563,7 @@ function calcularPuntajes() {
     ` (${detecciones.length} impactos, promedio ${(detecciones.length ? (total/detecciones.length).toFixed(1) : 0)})`;
 }
 
-
-// ---------- IndexedDB: guardado local en el teléfono ----------
+// ---------- IndexedDB: guardado local de rondas en el teléfono ----------
 let db = null;
 const DB_NAME = 'tiroApp';
 const STORE = 'rondas';
@@ -322,11 +609,12 @@ function borrarTodasLasRondas() {
   });
 }
 
-const NOMBRE_DIANA = {
-  issf: 'ISSF 25m', protarget: 'ProTarget', liso: 'Blanco liso', lineas: 'Líneas finas', custom: 'Personalizada'
-};
+let rondas = []; // todas las rondas guardadas en este teléfono
 
-let rondas = []; // todas las rondas guardadas (todas las personas/dianas/distancias)
+function nombreDianaActual() {
+  const preset = presetActual();
+  return preset ? preset.nombre : dianaSelect.value;
+}
 
 function rondaAnteriorParaSeleccionActual() {
   const tirador = tiradorInput.value.trim().toLowerCase();
@@ -359,20 +647,19 @@ function renderListaRondas() {
         <span>${r.fecha}</span>
       </div>
       <div style="color:#999; margin-top:2px;">
-        ${NOMBRE_DIANA[r.diana] || r.diana} · ${r.distancia}m ·
+        ${r.dianaNombre || r.diana} · ${r.distancia}m ·
         ${r.count} imp.${r.nuevos != null ? ` (${r.nuevos} nuevos)` : ''}${r.puntajeTotal != null ? ` · ${r.puntajeTotal} pts` : ''}
       </div>
     </div>
   `).join('');
 }
 
-
-
 document.getElementById('guardarRonda').addEventListener('click', async () => {
   if (!detecciones.length && !confirm('No hay impactos detectados. ¿Guardar igual?')) return;
   const ronda = {
     tirador: tiradorInput.value.trim(),
     diana: dianaSelect.value,
+    dianaNombre: nombreDianaActual(),
     distancia: distanciaSelect.value,
     fecha: fechaInput.value || new Date().toISOString().slice(0, 10),
     detecciones: detecciones.map(d => ({ x: d.x, y: d.y, r: d.r })),
@@ -393,25 +680,20 @@ document.getElementById('reiniciarSesion').addEventListener('click', async () =>
   comparacionInfo.style.display = 'none';
 });
 
-// si cambia tirador/diana/distancia, recalcular contra qué ronda comparar
-[tiradorInput, dianaSelect, distanciaSelect].forEach(el => {
+[dianaSelect, distanciaSelect].forEach(el => {
   el.addEventListener('change', () => {
     if (srcMat) { compararConRondaAnterior(); redibujar(); }
   });
 });
-tiradorInput.addEventListener('blur', () => {
-  if (srcMat) { compararConRondaAnterior(); redibujar(); }
-});
 
-// ---------- comparación contra la ronda anterior (misma persona+diana+distancia) ----------
 function compararConRondaAnterior() {
   const anterior = rondaAnteriorParaSeleccionActual();
   if (!anterior || !anterior.detecciones.length) {
-    detecciones.forEach(d => d.esNuevo = true); // primera ronda de este grupo: todo es nuevo
+    detecciones.forEach(d => d.esNuevo = true);
     comparacionInfo.style.display = 'none';
     return;
   }
-  const TOLERANCIA = 22; // px, a la escala de trabajo (max 1600px de lado)
+  const TOLERANCIA = 22;
   detecciones.forEach(d => {
     const yaExistia = anterior.detecciones.some(p =>
       Math.hypot(p.x - d.x, p.y - d.y) < TOLERANCIA
@@ -436,20 +718,14 @@ function setModo(nuevo) {
 }
 modeHoughBtn.addEventListener('click', () => setModo('hough'));
 modeBlancoBtn.addEventListener('click', () => setModo('blanco'));
-setModo('hough');
 fechaInput.value = new Date().toISOString().slice(0, 10);
-abrirDB().then(refrescarRondas);
 
-function onOpenCvReady() {
-  cvReady = true;
-  statusEl.textContent = '';
-}
-// opencv.js llama a esta global cuando termina de cargar (WASM)
+function onOpenCvReady() { cvReady = true; statusEl.textContent = ''; }
 cv['onRuntimeInitialized'] = onOpenCvReady;
 statusEl.textContent = 'Cargando motor de visión (OpenCV.js)...';
 
-document.getElementById('fileCamera').addEventListener('change', handleFile);
-document.getElementById('fileUpload').addEventListener('change', handleFile);
+document.getElementById('fileCamera').addEventListener('change', (e) => handleFileObject(e.target.files[0]));
+document.getElementById('fileUpload').addEventListener('change', (e) => handleFileObject(e.target.files[0]));
 document.getElementById('reanalizar').addEventListener('click', () => analizar());
 document.getElementById('reset').addEventListener('click', () => location.reload());
 threshSlider.addEventListener('change', () => analizar());
@@ -457,8 +733,7 @@ circSlider.addEventListener('change', () => analizar());
 param2Slider.addEventListener('change', () => analizar());
 radioSlider.addEventListener('change', () => analizar());
 
-function handleFile(e) {
-  const file = e.target.files[0];
+function handleFileObject(file) {
   if (!file) return;
   if (!cvReady) {
     statusEl.textContent = 'Esperá un segundo, todavía está cargando el motor...';
@@ -466,7 +741,6 @@ function handleFile(e) {
   }
   const img = new Image();
   img.onload = () => {
-    // limitamos el lado mayor a 1600px, igual que en las pruebas de escritorio
     const maxDim = 1600;
     const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
     const w = Math.round(img.width * scale);
@@ -481,8 +755,8 @@ function handleFile(e) {
     sesionPanel.style.display = 'block';
 
     if (srcMat) srcMat.delete();
-    srcMat = cv.imread(canvas); // toma el frame ya dibujado (RGBA)
-    calibracion = null; // la calibración de puntaje era para la foto anterior
+    srcMat = cv.imread(canvas);
+    calibracion = null;
     calibrando = null;
     puntajeInfo.style.display = 'none';
 
@@ -492,8 +766,6 @@ function handleFile(e) {
 }
 
 function mascaraPapel() {
-  // recorta el 20% derecho del frame (ahí suele caer la casillita de
-  // referencia impresa + la cinta, que generan falsos positivos)
   const w = srcMat.cols, h = srcMat.rows;
   const mask = new cv.Mat.zeros(h, w, cv.CV_8UC1);
   const pt1 = new cv.Point(0, 0);
@@ -511,11 +783,7 @@ function analizarHough() {
   const param2 = parseInt(param2Slider.value, 10);
   const maxR = parseInt(radioSlider.value, 10);
   const minR = Math.max(4, Math.round(maxR * 0.4));
-  cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1,
-    14,           // minDist entre centros
-    70,           // param1 (Canny alto)
-    param2,       // param2 (umbral del acumulador -- el slider de sensibilidad)
-    minR, maxR);
+  cv.HoughCircles(gray, circles, cv.HOUGH_GRADIENT, 1, 14, 70, param2, minR, maxR);
 
   const mask = mascaraPapel();
   detecciones = [];
@@ -525,10 +793,9 @@ function analizarHough() {
     const r = circles.data32F[i * 3 + 2];
     const xi = Math.round(x), yi = Math.round(y);
     if (xi < 0 || yi < 0 || xi >= mask.cols || yi >= mask.rows) continue;
-    if (mask.ucharPtr(yi, xi)[0] === 0) continue; // fuera de zona válida
+    if (mask.ucharPtr(yi, xi)[0] === 0) continue;
     detecciones.push({ x, y, r });
   }
-
   gray.delete(); circles.delete(); mask.delete();
 }
 
@@ -562,7 +829,6 @@ function analizarBlanco() {
     detecciones.push({ x: circle.center.x, y: circle.center.y, r: circle.radius });
     c.delete();
   }
-
   gray.delete(); oscuros.delete(); kernel.delete();
   contours.delete(); hierarchy.delete();
 }
@@ -570,10 +836,7 @@ function analizarBlanco() {
 function analizar() {
   if (!srcMat) return;
   statusEl.textContent = 'Analizando...';
-
-  if (modo === 'hough') analizarHough();
-  else analizarBlanco();
-
+  if (modo === 'hough') analizarHough(); else analizarBlanco();
   compararConRondaAnterior();
   if (calibracion) calcularPuntajes();
   redibujar();
@@ -616,7 +879,6 @@ function redibujar() {
     : `${detecciones.length} <span>impactos detectados</span>`;
 }
 
-// tocar para calibrar (si está en modo calibración) / borrar / agregar detección
 canvas.addEventListener('click', (e) => {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -640,11 +902,8 @@ canvas.addEventListener('click', (e) => {
   }
 
   const idx = detecciones.findIndex(d => Math.hypot(d.x - x, d.y - y) < Math.max(d.r + 6, 18));
-  if (idx >= 0) {
-    detecciones.splice(idx, 1); // borrar falso positivo
-  } else {
-    detecciones.push({ x, y, r: 10, esNuevo: true }); // agregar manual
-  }
+  if (idx >= 0) detecciones.splice(idx, 1);
+  else detecciones.push({ x, y, r: 10, esNuevo: true });
   if (calibracion) calcularPuntajes();
   redibujar();
 });
