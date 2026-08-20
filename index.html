@@ -197,10 +197,21 @@
             <label style="margin:0;">Las zonas tienen todas el mismo ancho (ej: ISSF/ProTarget)</label>
           </div>
           <p class="hint">
-            Con zonas parejas alcanza con 2 toques (centro + borde exterior).
-            Si no son parejas, tocás el borde de cada zona una por una, de
-            la de más puntos (adentro) hacia afuera.
+            <b>Zonas parejas</b>: tocás 2 puntos opuestos <i>del anillo de
+            menor puntaje</i> (el más grande que da puntos — cuidado si el
+            blanco tiene además un marco decorativo más afuera, ese no
+            cuenta). <b>Zonas irregulares</b>: los primeros 2 toques pueden
+            ser en cualquier anillo bien visible (solo fijan el centro), y
+            después tocás una vez cada zona, de la de más puntos hacia la
+            de menos — más toques, pero sin ambigüedad sobre qué anillo es
+            cuál. Si tu blanco tiene círculos "de más" (como un puntito
+            central o un marco exterior que no puntúan), usá zonas
+            irregulares aunque el ancho sea parejo.
           </p>
+          <div class="slider-row" style="display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="marcoExtraCheckbox" style="width:auto;">
+            <label style="margin:0;">Tiene un anillo extra de referencia (decorativo, sin puntaje) más afuera de la última zona</label>
+          </div>
           <div class="row">
             <label class="btn secondary" id="calibrarGeometriaBtn">📍 Calibrar anillos sobre la foto</label>
           </div>
@@ -243,6 +254,15 @@
       <div id="status"></div>
     </div>
 
+    <div class="panel" id="tapadoBloque" style="display:none;">
+      <label><b>¿Tapaste los impactos anteriores antes de sacar esta foto?</b></label>
+      <div class="row" style="margin-top:10px;">
+        <label class="btn secondary" id="tapadoSiBtn" style="flex:1; font-size:13px;">✅ Sí, tapé</label>
+        <label class="btn secondary" id="tapadoNoBtn" style="flex:1; font-size:13px;">⬜ No, quedaron visibles</label>
+      </div>
+      <p class="hint" id="tapadoHint">Elegí una opción — determina si comparamos por coordenadas contra la ronda anterior o si todo cuenta como nuevo.</p>
+    </div>
+
     <div id="canvasWrap">
       <div class="row" id="zoomControls" style="margin-bottom:8px;">
         <label class="btn secondary" id="zoomOut" style="flex:0 0 50px;">➖</label>
@@ -277,7 +297,7 @@
           </div>
         </div>
 
-        <div class="slider-row">
+        <div class="slider-row" id="bloqueTipoBlanco">
           <label>Tipo de blanco</label>
           <div class="row">
             <label class="btn secondary" id="modeHough" style="flex:1;">⚫ Con anillos / círculo negro</label>
@@ -285,31 +305,33 @@
           </div>
         </div>
 
-        <div id="sliderHough">
-          <div class="slider-row">
-            <label>Sensibilidad (más bajo = detecta más, pero más falsos positivos)</label>
-            <input type="range" id="param2Slider" min="8" max="25" value="14">
+        <div id="bloqueSliders">
+          <div id="sliderHough">
+            <div class="slider-row">
+              <label>Sensibilidad (más bajo = detecta más, pero más falsos positivos)</label>
+              <input type="range" id="param2Slider" min="8" max="25" value="14">
+            </div>
+            <div class="slider-row">
+              <label>Radio máximo del agujero (ajustá al tamaño real en la foto)</label>
+              <input type="range" id="radioSlider" min="8" max="35" value="17">
+            </div>
           </div>
-          <div class="slider-row">
-            <label>Radio máximo del agujero (ajustá al tamaño real en la foto)</label>
-            <input type="range" id="radioSlider" min="8" max="35" value="17">
-          </div>
-        </div>
 
-        <div id="sliderBlanco" style="display:none;">
-          <div class="slider-row">
-            <label>Sensibilidad del umbral (más alto = más estricto)</label>
-            <input type="range" id="threshSlider" min="40" max="160" value="100">
+          <div id="sliderBlanco" style="display:none;">
+            <div class="slider-row">
+              <label>Sensibilidad del umbral (más alto = más estricto)</label>
+              <input type="range" id="threshSlider" min="40" max="160" value="100">
+            </div>
+            <div class="slider-row">
+              <label>Circularidad mínima (más alto = solo formas bien redondas)</label>
+              <input type="range" id="circSlider" min="20" max="90" value="45">
+            </div>
           </div>
-          <div class="slider-row">
-            <label>Circularidad mínima (más alto = solo formas bien redondas)</label>
-            <input type="range" id="circSlider" min="20" max="90" value="45">
-          </div>
-        </div>
 
-        <div class="row" style="margin-top:14px;">
-          <label class="btn secondary" id="reanalizar">🔄 Re-analizar</label>
-          <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
+          <div class="row" style="margin-top:14px;" id="filaReanalizar">
+            <label class="btn secondary" id="reanalizar">🔄 Re-analizar</label>
+            <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
+          </div>
         </div>
       </div>
     </div>
@@ -460,14 +482,63 @@ abrirAdminPanel.addEventListener('click', () => {
 });
 
 async function refrescarListaUsuarios() {
-  const { data, error } = await sb.from('profiles').select('username, role').order('username');
+  const { data, error } = await sb.from('profiles').select('id, username, role').order('username');
   if (error || !data) return;
   adminListaUsuarios.innerHTML = data.map(u => `
-    <div class="diana-item">
+    <div class="diana-item" style="flex-wrap:wrap; gap:6px;">
       <span>${u.username}</span>
-      <span class="badge ${u.role === 'admin' ? 'publica' : 'propia'}">${u.role}</span>
+      ${u.id === sesionActual.user.id
+        ? `<span class="badge ${u.role === 'admin' ? 'publica' : 'propia'}">${u.role} (vos)</span>`
+        : `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <select class="cambiar-rol" data-id="${u.id}" data-nombre="${u.username}" style="padding:6px 8px; font-size:13px; width:auto;">
+              <option value="normal" ${u.role === 'normal' ? 'selected' : ''}>normal</option>
+              <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>admin</option>
+            </select>
+            <a href="#" class="borrar-usuario" data-id="${u.id}" data-nombre="${u.username}" style="color:#ff453a; font-size:13px; text-decoration:none;">🗑️</a>
+          </div>
+        `}
     </div>
   `).join('');
+
+  document.querySelectorAll('.cambiar-rol').forEach(select => {
+    select.addEventListener('change', async () => {
+      const id = select.dataset.id;
+      const nombre = select.dataset.nombre;
+      const nuevoRol = select.value;
+      if (!confirm(`¿Cambiar el rol de "${nombre}" a "${nuevoRol}"?`)) {
+        await refrescarListaUsuarios(); // revierte el select visualmente
+        return;
+      }
+      adminEstado.textContent = 'Actualizando...';
+      const { error } = await sb.from('profiles').update({ role: nuevoRol }).eq('id', id);
+      if (error) {
+        adminEstado.textContent = 'Error: ' + error.message;
+        return;
+      }
+      adminEstado.textContent = `Rol de "${nombre}" actualizado ✔`;
+      await refrescarListaUsuarios();
+      setTimeout(() => adminEstado.textContent = '', 2500);
+    });
+  });
+
+  document.querySelectorAll('.borrar-usuario').forEach(link => {
+    link.addEventListener('click', async (e) => {
+      e.preventDefault();
+      const id = link.dataset.id;
+      const nombre = link.dataset.nombre;
+      if (!confirm(`¿Borrar al usuario "${nombre}"? Esto también borra todas sus dianas guardadas. No se puede deshacer.`)) return;
+      adminEstado.textContent = 'Borrando...';
+      const { data, error } = await sb.functions.invoke('admin-delete-user', { body: { userId: id } });
+      if (error || (data && data.error)) {
+        adminEstado.textContent = 'Error: ' + (data?.error || error.message);
+        return;
+      }
+      adminEstado.textContent = `Usuario "${nombre}" borrado ✔`;
+      await refrescarListaUsuarios();
+      setTimeout(() => adminEstado.textContent = '', 2500);
+    });
+  });
 }
 
 document.getElementById('adminCrearUsuarioBtn').addEventListener('click', async () => {
@@ -602,9 +673,10 @@ function actualizarPanelPuntaje(preset) {
   } else {
     document.getElementById('puntajePanelTitulo').textContent = '🎯 Puntaje';
     document.getElementById('puntajePanelHint').innerHTML =
-      'Tocá <b>el centro</b> del blanco, y después <b>el borde exterior</b> ' +
-      '(la última zona). Con esos dos toques calcula el puntaje de cada impacto.';
-    calibrarBtn.textContent = '📍 Calibrar centro y borde';
+      'Tocá <b>2 puntos opuestos</b> del anillo más grande (un lado, y el ' +
+      'lado contrario cruzando el centro). Con eso calcula el centro y el ' +
+      'puntaje de cada impacto.';
+    calibrarBtn.textContent = '📍 Calibrar (2 toques opuestos)';
   }
 }
 
@@ -654,6 +726,8 @@ document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
   panelFotoBlanco.style.display = 'none';
   puntajePanel.style.display = 'none';
   document.getElementById('bloqueModoEdicion').style.display = 'none';
+  document.getElementById('bloqueSliders').style.display = 'none';
+  document.getElementById('count').style.display = 'none';
   limpiarCanvasActual();
   agregarDianaPanel.style.display = 'block';
   agregarDianaPanel.scrollIntoView({ behavior: 'smooth' });
@@ -666,7 +740,10 @@ function cerrarModoAgregarDiana() {
   tipoGeometriaSelect.value = 'ninguno';
   circulosBloque.style.display = 'none';
   contornoBloqueUI.style.display = 'none';
+  marcoExtraCheckbox.checked = false;
   document.getElementById('bloqueModoEdicion').style.display = 'block';
+  document.getElementById('bloqueSliders').style.display = 'block';
+  document.getElementById('count').style.display = 'block';
   limpiarCanvasActual();
   panelDatosSesion.style.display = 'block';
   panelFotoBlanco.style.display = 'block';
@@ -726,7 +803,7 @@ nuevaDianaFoto.addEventListener('change', (e) => {
     // la usamos también como la foto "de trabajo" para poder ajustar
     // los sliders mirando el resultado en vivo, antes de guardar
     handleFileObject(nuevaDianaArchivo);
-    nuevaDianaEstado.textContent = 'Foto cargada — ajustá los sliders de abajo hasta que la detección se vea bien, después guardá.';
+    nuevaDianaEstado.textContent = 'Foto cargada — elegí el tipo de zona y calibrá los puntos abajo.';
     geometriaBloque.style.display = 'block';
   }
 });
@@ -750,7 +827,12 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
 
   let geometria = null;
   if (tipoGeometriaSelect.value === 'circulos' && calibracion && calibracion.tipo === 'circulos') {
-    geometria = { tipo: 'circulos', zonas: calibracion.geometria.zonas, radios: calibracion.geometria.radios };
+    geometria = {
+      tipo: 'circulos',
+      zonas: calibracion.geometria.zonas,
+      radios: calibracion.geometria.radios,
+      marcoExterior: calibracion.geometria.marcoExterior || null,
+    };
   } else if (tipoGeometriaSelect.value === 'contorno' && calibracion && calibracion.tipo === 'contorno') {
     geometria = { tipo: 'contorno', vertices: calibracion.vertices };
   }
@@ -828,24 +910,24 @@ let calibrando = null;   // null | 'circuloExterior' | 'anillo' | 'contornoP1' |
 let calibracion = null;  // {cx, cy, rOuter, geometria:{zonas, radios}}
 let calibrandoModoGeometria = false; // true = tap por cada zona (irregular)
 let calibrandoZonasObjetivo = 9;
+let calibrandoPideMarcoExtra = false; // true = después de las zonas, pedir 1 toque más (decorativo, sin puntaje)
 let calibrandoRadiosTemp = []; // radios crudos (px) durante calibración por zona
-let calibrandoCirculoTemp = []; // los 3 puntos del anillo exterior mientras se tocan
+let calibrandoCirculoTemp = []; // los 2 puntos opuestos del anillo exterior mientras se tocan
 let calibrandoDefinirGeometria = false; // true = estamos definiendo una geometría nueva (Agregar diana); false = reubicando una ya guardada
 
 function geometriaPareja(zonas) {
   return { zonas, radios: Array.from({ length: zonas }, (_, i) => (i + 1) / zonas) };
 }
 
-// centro + radio exactos a partir de 3 puntos sobre un círculo -- mucho más
-// preciso que tocar el centro a mano (un punto minúsculo, fácil de errar).
-function circuloDesde3Puntos(p1, p2, p3) {
-  const [x1, y1] = [p1.x, p1.y], [x2, y2] = [p2.x, p2.y], [x3, y3] = [p3.x, p3.y];
-  const d = 2 * (x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2));
-  if (Math.abs(d) < 1e-6) return null; // puntos casi alineados, no forman círculo válido
-  const ux = ((x1 * x1 + y1 * y1) * (y2 - y3) + (x2 * x2 + y2 * y2) * (y3 - y1) + (x3 * x3 + y3 * y3) * (y1 - y2)) / d;
-  const uy = ((x1 * x1 + y1 * y1) * (x3 - x2) + (x2 * x2 + y2 * y2) * (x1 - x3) + (x3 * x3 + y3 * y3) * (x2 - x1)) / d;
-  const r = Math.hypot(x1 - ux, y1 - uy);
-  return { cx: ux, cy: uy, r };
+// centro + radio a partir de 2 puntos opuestos de un círculo (uno de cada
+// lado, cruzando el centro) -- mucho más preciso que tocar el centro a
+// mano (un punto minúsculo, fácil de errar), y más simple/robusto que
+// ajustar un círculo con 3 puntos arbitrarios.
+function circuloDesdePuntosOpuestos(p1, p2) {
+  const cx = (p1.x + p2.x) / 2;
+  const cy = (p1.y + p2.y) / 2;
+  const r = Math.hypot(p2.x - p1.x, p2.y - p1.y) / 2;
+  return { cx, cy, r };
 }
 
 function puntoEnPoligono(x, y, vertices) {
@@ -860,7 +942,7 @@ function puntoEnPoligono(x, y, vertices) {
   return dentro;
 }
 
-// calibración sobre una foto real: 3 toques sobre el anillo exterior
+// calibración sobre una foto real: 2 toques opuestos sobre el anillo exterior
 // (círculo más grande) para fijar centro+radio con precisión, usando la
 // geometría YA guardada de la diana seleccionada (círculos o contorno)
 calibrarBtn.addEventListener('click', () => {
@@ -878,7 +960,7 @@ calibrarBtn.addEventListener('click', () => {
     calibrandoCirculoTemp = [];
     calibracion = { tipo: 'circulos', cx: 0, cy: 0, rOuter: 0, geometria };
     calibrando = 'circuloExterior';
-    puntajeInfo.innerHTML = '👉 Tocá <b>3 puntos distintos</b> sobre el borde del anillo más grande (1/3).';
+    puntajeInfo.innerHTML = '👉 Tocá un punto en el borde del anillo más grande (1/2).';
   }
 });
 
@@ -924,6 +1006,7 @@ function calcularPuntajes() {
 const geometriaBloque = document.getElementById('geometriaBloque');
 const zonasInput = document.getElementById('zonasInput');
 const parejoCheckbox = document.getElementById('parejoCheckbox');
+const marcoExtraCheckbox = document.getElementById('marcoExtraCheckbox');
 const calibrarGeometriaBtn = document.getElementById('calibrarGeometriaBtn');
 
 calibrarGeometriaBtn.addEventListener('click', () => {
@@ -933,11 +1016,26 @@ calibrarGeometriaBtn.addEventListener('click', () => {
   calibrandoCirculoTemp = [];
   calibrandoModoGeometria = !parejoCheckbox.checked;
   calibrandoDefinirGeometria = true;
+  calibrandoPideMarcoExtra = marcoExtraCheckbox.checked;
   calibracion = null;
   calibrando = 'circuloExterior';
   puntajeInfo.style.display = 'block';
-  puntajeInfo.innerHTML = '👉 Tocá <b>3 puntos distintos</b> sobre el borde del anillo más grande (1/3).';
+  puntajeInfo.innerHTML = calibrandoModoGeometria
+    ? '👉 Tocá un punto en el borde de <b>cualquier anillo bien visible</b> (esto solo va a fijar el centro).'
+    : '👉 Tocá un punto en el borde del anillo de <b>menor puntaje</b> (el más grande, el que da la zona 1).';
 });
+
+// llamar cuando termina de calibrarse la zona 1 (parejo o irregular) --
+// si el usuario tildó "anillo extra", pide un toque más antes de cerrar
+function terminarCalibracionCirculos() {
+  if (calibrandoDefinirGeometria && calibrandoPideMarcoExtra) {
+    calibrando = 'marcoExtra';
+    puntajeInfo.innerHTML = '👉 Tocá el <b>anillo extra de referencia</b> (el de más afuera, no puntúa).';
+    return;
+  }
+  calibrando = null;
+  calcularPuntajes();
+}
 
 
 // ---------- IndexedDB: guardado local de rondas en el teléfono ----------
@@ -1006,6 +1104,26 @@ function rondaAnteriorParaSeleccionActual() {
   return filtradas[filtradas.length - 1];
 }
 
+// ---------- ¿tapaste los impactos anteriores antes de esta foto? ----------
+const tapadoBloque = document.getElementById('tapadoBloque');
+const tapadoSiBtn = document.getElementById('tapadoSiBtn');
+const tapadoNoBtn = document.getElementById('tapadoNoBtn');
+const tapadoHint = document.getElementById('tapadoHint');
+let tapadoAnteriores = null; // null = sin elegir todavía | true | false
+
+function setTapado(valor) {
+  tapadoAnteriores = valor;
+  tapadoSiBtn.style.background = valor === true ? '#0a84ff' : '#2c2c2e';
+  tapadoNoBtn.style.background = valor === false ? '#0a84ff' : '#2c2c2e';
+  tapadoHint.textContent = valor === true
+    ? 'Todos los impactos de esta foto van a contar como nuevos.'
+    : 'Se va a comparar por coordenadas contra la ronda anterior.';
+  compararConRondaAnterior();
+  redibujar();
+}
+tapadoSiBtn.addEventListener('click', () => setTapado(true));
+tapadoNoBtn.addEventListener('click', () => setTapado(false));
+
 async function refrescarRondas() {
   rondas = await getTodasLasRondas();
   rondas.sort((a, b) => a.id - b.id);
@@ -1033,21 +1151,47 @@ function renderListaRondas() {
 
 document.getElementById('guardarRonda').addEventListener('click', async () => {
   if (!detecciones.length && !confirm('No hay impactos detectados. ¿Guardar igual?')) return;
+  if (rondaAnteriorParaSeleccionActual() && tapadoAnteriores === null) {
+    statusEl.textContent = 'Antes de guardar, decime si tapaste los impactos anteriores.';
+    tapadoBloque.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
+  const nuevos = detecciones.filter(d => d.esNuevo !== false).length;
+  const acertadosZona = detecciones.some(d => d.dentro != null)
+    ? detecciones.filter(d => d.esNuevo !== false && d.dentro).length
+    : null;
+  const puntosRonda = calibracion
+    ? detecciones.filter(d => d.esNuevo !== false).reduce((s, d) => s + (d.puntaje || 0), 0)
+    : null;
+  const fecha = fechaInput.value || new Date().toISOString().slice(0, 10);
+
   const ronda = {
     tirador: tiradorInput.value.trim(),
     diana: dianaSelect.value,
     dianaNombre: nombreDianaActual(),
     distancia: distanciaSelect.value,
-    fecha: fechaInput.value || new Date().toISOString().slice(0, 10),
+    fecha,
+    tapado: tapadoAnteriores,
     detecciones: detecciones.map(d => ({ x: d.x, y: d.y, r: d.r })),
     count: detecciones.length,
-    nuevos: detecciones.filter(d => d.esNuevo !== false).length,
+    nuevos,
     puntajeTotal: calibracion ? detecciones.reduce((s, d) => s + (d.puntaje || 0), 0) : null,
   };
   await guardarRondaDB(ronda);
   await refrescarRondas();
-  statusEl.textContent = 'Ronda guardada ✔';
-  setTimeout(() => statusEl.textContent = '', 2000);
+
+  // resumen de sesión en la nube (acumulado por tirador+fecha+diana+distancia)
+  const { error: rpcError } = await sb.rpc('registrar_ronda_en_sesion', {
+    p_fecha: fecha,
+    p_diana: dianaSelect.value,
+    p_distancia: distanciaSelect.value,
+    p_nuevos: nuevos,
+    p_puntos: puntosRonda,
+    p_acertados: acertadosZona,
+  });
+
+  statusEl.textContent = rpcError ? 'Ronda guardada ✔ (resumen en la nube falló)' : 'Ronda guardada ✔';
+  setTimeout(() => statusEl.textContent = '', 2500);
 });
 
 document.getElementById('reiniciarSesion').addEventListener('click', async () => {
@@ -1059,6 +1203,7 @@ document.getElementById('reiniciarSesion').addEventListener('click', async () =>
 
 [dianaSelect, distanciaSelect].forEach(el => {
   el.addEventListener('change', () => {
+    setTapado(null);
     if (srcMat) { compararConRondaAnterior(); redibujar(); }
   });
 });
@@ -1068,14 +1213,26 @@ function compararConRondaAnterior() {
   if (!anterior || !anterior.detecciones.length) {
     detecciones.forEach(d => d.esNuevo = true);
     comparacionInfo.style.display = 'none';
+    tapadoBloque.style.display = 'none';
     return;
   }
+  tapadoBloque.style.display = modoAgregarDiana ? 'none' : 'block';
+
+  if (tapadoAnteriores === true) {
+    detecciones.forEach(d => d.esNuevo = true);
+    comparacionInfo.style.display = 'block';
+    comparacionInfo.innerHTML =
+      `Marcaste que tapaste los impactos de la ronda de <b>${anterior.fecha}</b> — ` +
+      `<b style="color:#34c759;">los ${detecciones.length} de esta foto cuentan como nuevos</b>.`;
+    return;
+  }
+
   const TOLERANCIA = 22;
   detecciones.forEach(d => {
     const yaExistia = anterior.detecciones.some(p =>
       Math.hypot(p.x - d.x, p.y - d.y) < TOLERANCIA
     );
-    d.esNuevo = !yaExistia;
+    d.esNuevo = !yaExistia; // vale para tapadoAnteriores === false o null (todavía sin elegir)
   });
   const nuevos = detecciones.filter(d => d.esNuevo).length;
   comparacionInfo.style.display = 'block';
@@ -1091,7 +1248,8 @@ function setModo(nuevo) {
   sliderBlanco.style.display = modo === 'blanco' ? 'block' : 'none';
   modeHoughBtn.style.background = modo === 'hough' ? '#0a84ff' : '#2c2c2e';
   modeBlancoBtn.style.background = modo === 'blanco' ? '#0a84ff' : '#2c2c2e';
-  if (srcMat) analizar();
+  if (!srcMat) return;
+  if (modoAgregarDiana) redibujar(); else analizar();
 }
 modeHoughBtn.addEventListener('click', () => setModo('hough'));
 modeBlancoBtn.addEventListener('click', () => setModo('blanco'));
@@ -1129,12 +1287,16 @@ function handleFileObject(file) {
     canvasWrap.style.display = 'block';
     resultPanel.style.display = 'block';
     controls.style.display = 'block';
-    sesionPanel.style.display = 'block';
+    sesionPanel.style.display = modoAgregarDiana ? 'none' : 'block';
+    document.getElementById('bloqueModoEdicion').style.display = modoAgregarDiana ? 'none' : 'block';
+    document.getElementById('bloqueSliders').style.display = modoAgregarDiana ? 'none' : 'block';
+    document.getElementById('count').style.display = modoAgregarDiana ? 'none' : 'block';
     zoomPct = 100;
     aplicarZoom();
 
     if (srcMat) srcMat.delete();
     srcMat = cv.imread(canvas);
+    detecciones = [];
     calibracion = null;
     calibrando = null;
     calibrandoContornoTemp = [];
@@ -1142,8 +1304,12 @@ function handleFileObject(file) {
     calibrandoCirculoTemp = [];
     if (terminarContornoRow) terminarContornoRow.style.display = 'none';
     puntajeInfo.style.display = 'none';
+    tapadoAnteriores = null;
+    tapadoSiBtn.style.background = '#2c2c2e';
+    tapadoNoBtn.style.background = '#2c2c2e';
+    tapadoHint.textContent = 'Elegí una opción — determina si comparamos por coordenadas contra la ronda anterior o si todo cuenta como nuevo.';
 
-    analizar();
+    if (modoAgregarDiana) redibujar(); else analizar();
   };
   img.src = URL.createObjectURL(file);
 }
@@ -1254,6 +1420,13 @@ function redibujar() {
         ctx.stroke();
       });
     }
+    if (calibracion.geometria && calibracion.geometria.marcoExterior && calibracion.rOuter) {
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.arc(calibracion.cx, calibracion.cy, calibracion.rOuter * calibracion.geometria.marcoExterior, 0, 2 * Math.PI);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
     ctx.beginPath();
     ctx.arc(calibracion.cx, calibracion.cy, 4, 0, 2 * Math.PI);
     ctx.fill();
@@ -1349,39 +1522,41 @@ canvas.addEventListener('click', (e) => {
 
   if (calibrando === 'circuloExterior') {
     calibrandoCirculoTemp.push({ x, y });
-    if (calibrandoCirculoTemp.length < 3) {
-      puntajeInfo.innerHTML = `👉 Tocá otro punto sobre el borde del anillo más grande (${calibrandoCirculoTemp.length + 1}/3).`;
+    if (calibrandoCirculoTemp.length < 2) {
+      puntajeInfo.innerHTML = '👉 Ahora tocá el punto <b>opuesto</b> (del otro lado, cruzando el centro).';
       redibujar();
       return;
     }
-    const ajuste = circuloDesde3Puntos(calibrandoCirculoTemp[0], calibrandoCirculoTemp[1], calibrandoCirculoTemp[2]);
-    if (!ajuste) {
-      puntajeInfo.innerHTML = '⚠️ Esos 3 puntos están casi en línea recta, no forman un círculo. Probá de nuevo, más separados.';
+    const ajuste = circuloDesdePuntosOpuestos(calibrandoCirculoTemp[0], calibrandoCirculoTemp[1]);
+    if (ajuste.r < 10) {
+      puntajeInfo.innerHTML = '⚠️ Esos dos puntos están casi en el mismo lugar. Probá de nuevo, bien del lado opuesto.';
       calibrandoCirculoTemp = [];
       redibujar();
       return;
     }
     if (!calibracion) calibracion = { tipo: 'circulos', geometria: { zonas: calibrandoZonasObjetivo, radios: [] } };
-    calibracion.cx = ajuste.cx; calibracion.cy = ajuste.cy; calibracion.rOuter = ajuste.r;
+    calibracion.cx = ajuste.cx; calibracion.cy = ajuste.cy;
 
     if (!calibrandoDefinirGeometria) {
-      // reubicando una geometría YA guardada (diana existente): nada más que hacer
+      // reubicando una geometría YA guardada (diana existente): este anillo
+      // SÍ es la zona 1 (la app ya sabe cuál elegir), listo
+      calibracion.rOuter = ajuste.r;
       calibrando = null;
       calcularPuntajes();
     } else if (calibrandoModoGeometria) {
-      // definiendo una geometría nueva, zonas irregulares: falta 1 toque por zona (N-1)
+      // definiendo una geometría nueva, zonas irregulares: este par de
+      // puntos solo fijó el CENTRO -- ahora falta un toque por cada zona,
+      // de la N (más adentro) a la 1 (más afuera), para no confundir
+      // ningún anillo decorativo con una zona real
       calibrandoRadiosTemp = [];
       calibrando = 'anillo';
-      const primeraZona = calibrandoZonasObjetivo - 1;
-      puntajeInfo.innerHTML = primeraZona >= 1
-        ? `👉 Centro fijado. Ahora tocá el borde de la zona <b>${primeraZona}</b> (la de más adentro, vale más puntos).`
-        : '';
-      if (primeraZona < 1) { calibracion.geometria.radios = [1]; calibrando = null; calcularPuntajes(); }
+      puntajeInfo.innerHTML = `👉 Centro fijado. Ahora tocá el borde de la zona <b>${calibrandoZonasObjetivo}</b> (la de más adentro, vale más puntos).`;
     } else {
-      // definiendo una geometría nueva, zonas parejas: ya está todo listo
+      // definiendo una geometría nueva, zonas parejas: este anillo se
+      // asume que ES la zona 1 (borde exterior de puntaje)
+      calibracion.rOuter = ajuste.r;
       calibracion.geometria = geometriaPareja(calibrandoZonasObjetivo);
-      calibrando = null;
-      calcularPuntajes();
+      terminarCalibracionCirculos();
     }
     redibujar();
     return;
@@ -1389,14 +1564,24 @@ canvas.addEventListener('click', (e) => {
   if (calibrando === 'anillo') {
     const dist = Math.hypot(x - calibracion.cx, y - calibracion.cy);
     calibrandoRadiosTemp.push(dist);
-    const restantes = calibrandoZonasObjetivo - 1 - calibrandoRadiosTemp.length;
+    const restantes = calibrandoZonasObjetivo - calibrandoRadiosTemp.length;
     if (restantes > 0) {
       puntajeInfo.innerHTML = `👉 Tocá el borde de la zona <b>${restantes}</b>.`;
       redibujar();
       return;
     }
-    // radios de las zonas N..2 (normalizados) + 1.0 para la zona 1 (=rOuter, ya conocido)
-    calibracion.geometria.radios = calibrandoRadiosTemp.map(r => r / calibracion.rOuter).concat([1]);
+    // el último toque (zona 1) define el radio exterior; el resto se
+    // normaliza como fracción de ese radio
+    const rOuter = calibrandoRadiosTemp[calibrandoRadiosTemp.length - 1];
+    calibracion.rOuter = rOuter;
+    calibracion.geometria.radios = calibrandoRadiosTemp.map(r => r / rOuter);
+    terminarCalibracionCirculos();
+    redibujar();
+    return;
+  }
+  if (calibrando === 'marcoExtra') {
+    const dist = Math.hypot(x - calibracion.cx, y - calibracion.cy);
+    calibracion.geometria.marcoExterior = dist / calibracion.rOuter;
     calibrando = null;
     calcularPuntajes();
     redibujar();
