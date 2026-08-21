@@ -369,6 +369,9 @@
         <label class="btn secondary" id="calibrarBtn">📍 Calibrar</label>
       </div>
       <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
+      <div class="row" id="confirmarAjusteRow" style="display:none; margin-top:10px;">
+        <button class="btn" id="confirmarAjusteBtn">✅ Confirmar posición</button>
+      </div>
     </div>
 
     <div class="panel" id="sesionPanel" style="display:none;">
@@ -686,8 +689,9 @@ function actualizarPanelPuntaje(preset) {
   if (geometria.tipo === 'contorno') {
     document.getElementById('puntajePanelTitulo').textContent = '🎯 Zona (adentro / afuera)';
     document.getElementById('puntajePanelHint').innerHTML =
-      'Tocá <b>la esquina superior-izquierda</b> y después <b>la esquina inferior-derecha</b> ' +
-      'del área donde está la zona marcada, para ubicarla sobre esta foto.';
+      'Tocá <b>3 esquinas</b> del área donde está la zona marcada (arriba-izq, ' +
+      'arriba-der, abajo-izq) — con 3 puntos corrige también rotación y ' +
+      'proporciones distintas entre fotos, no solo mover y escalar.';
     calibrarBtn.textContent = '📍 Calibrar ubicación de la zona';
   } else {
     document.getElementById('puntajePanelTitulo').textContent = '🎯 Puntaje';
@@ -809,7 +813,10 @@ terminarContornoBtn.addEventListener('click', () => {
     xf: (p.x - minX) / (maxX - minX),
     yf: (p.y - minY) / (maxY - minY),
   }));
-  calibracion = { tipo: 'contorno', vertices };
+  // guardamos la proporción real (ancho/alto) del trazo original -- si no,
+  // al normalizar a 0..1 se pierde y no se puede reconstruir la forma real
+  const aspecto = (maxX - minX) / (maxY - minY);
+  calibracion = { tipo: 'contorno', vertices, aspecto };
   calibrando = null;
   terminarContornoRow.style.display = 'none';
   contornoEstado.textContent = `Contorno guardado (${vertices.length} puntos) ✔`;
@@ -865,7 +872,7 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
       marcoExterior: calibracion.geometria.marcoExterior || null,
     };
   } else if (tipoGeometriaSelect.value === 'contorno' && calibracion && calibracion.tipo === 'contorno') {
-    geometria = { tipo: 'contorno', vertices: calibracion.vertices };
+    geometria = { tipo: 'contorno', vertices: calibracion.vertices, aspecto: calibracion.aspecto || 1 };
   }
 
   const registro = {
@@ -936,8 +943,10 @@ const distanciaSelect = document.getElementById('distanciaSelect');
 // ---------- puntaje: geometría configurable por diana ----------
 const puntajePanel = document.getElementById('puntajePanel');
 const calibrarBtn = document.getElementById('calibrarBtn');
+const confirmarAjusteRow = document.getElementById('confirmarAjusteRow');
+const confirmarAjusteBtn = document.getElementById('confirmarAjusteBtn');
 const puntajeInfo = document.getElementById('puntajeInfo');
-let calibrando = null;   // null | 'circuloExterior' | 'anillo' | 'contornoP1' | 'contornoP2' | 'contorno'
+let calibrando = null;   // null | 'circuloExterior' | 'anillo' | 'contornoAjustar' | 'contorno'
 let calibracion = null;  // {cx, cy, rOuter, geometria:{zonas, radios}}
 let calibrandoModoGeometria = false; // true = tap por cada zona (irregular)
 let calibrandoZonasObjetivo = 9;
@@ -973,18 +982,15 @@ function puntoEnPoligono(x, y, vertices) {
   return dentro;
 }
 
-// calibración sobre una foto real: 2 toques opuestos sobre el anillo exterior
-// (círculo más grande) para fijar centro+radio con precisión, usando la
-// geometría YA guardada de la diana seleccionada (círculos o contorno)
+// calibración sobre una foto real: para círculos, 2 toques opuestos.
+// para contorno, se arma un modo de arrastre (ver ajustarContorno abajo).
 calibrarBtn.addEventListener('click', () => {
   const preset = presetActual();
   const geometria = (preset && preset.geometria) || geometriaPareja(9);
   puntajeInfo.style.display = 'block';
 
   if (geometria.tipo === 'contorno') {
-    calibrando = 'contornoP1';
-    calibracion = { tipo: 'contorno', vertices: geometria.vertices, p1: null, p2: null };
-    puntajeInfo.innerHTML = '👉 Tocá la <b>esquina superior-izquierda</b> del área de la zona.';
+    iniciarAjusteContorno(geometria);
   } else {
     calibrandoModoGeometria = false;
     calibrandoDefinirGeometria = false;
@@ -993,6 +999,91 @@ calibrarBtn.addEventListener('click', () => {
     calibrando = 'circuloExterior';
     puntajeInfo.innerHTML = '👉 Tocá un punto en el borde del anillo más grande (1/2).';
   }
+});
+
+// ---------- ajuste de contorno por arrastre (mover + agrandar/achicar) ----------
+let ajuste = null; // { box:{x,y,w,h}, vertices, aspecto, arrastre: null|'mover'|'resize', offset:{dx,dy} }
+
+function iniciarAjusteContorno(geometria) {
+  const aspecto = geometria.aspecto || 1;
+  const h0 = canvas.height * 0.35;
+  const w0 = h0 * aspecto;
+  ajuste = {
+    box: { x: canvas.width / 2 - w0 / 2, y: canvas.height / 2 - h0 / 2, w: w0, h: h0 },
+    vertices: geometria.vertices,
+    aspecto,
+    arrastre: null,
+    offset: { dx: 0, dy: 0 },
+  };
+  calibrando = 'contornoAjustar';
+  calibracion = { tipo: 'contorno', vertices: geometria.vertices };
+  puntajeInfo.innerHTML =
+    '👉 Arrastrá la silueta para moverla. El punto <b>↔</b> (borde derecho) ' +
+    'ajusta solo el ancho, y el punto <b>↕</b> (borde inferior) ajusta solo el ' +
+    'alto — independientes. Tocá "✅ Confirmar" cuando calce.';
+  confirmarAjusteRow.style.display = 'flex';
+  canvas.style.touchAction = 'none'; // durante el arrastre, que no compita con el scroll de la página
+  redibujar();
+}
+
+function verticesDesdeAjuste() {
+  const { box, vertices } = ajuste;
+  return vertices.map(v => ({ x: box.x + v.xf * box.w, y: box.y + v.yf * box.h }));
+}
+
+function coordsCanvasDesdeEvento(e) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const cx = e.touches ? e.touches[0].clientX : e.clientX;
+  const cy = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (calibrando !== 'contornoAjustar' || !ajuste) return;
+  const { x, y } = coordsCanvasDesdeEvento(e);
+  const box = ajuste.box;
+  const hAncho = { x: box.x + box.w, y: box.y + box.h / 2 };   // manija de ancho, borde derecho
+  const hAlto = { x: box.x + box.w / 2, y: box.y + box.h };    // manija de alto, borde inferior
+  if (Math.hypot(x - hAncho.x, y - hAncho.y) < 24) {
+    ajuste.arrastre = 'resizeAncho';
+  } else if (Math.hypot(x - hAlto.x, y - hAlto.y) < 24) {
+    ajuste.arrastre = 'resizeAlto';
+  } else if (x >= box.x - 10 && x <= box.x + box.w + 10 && y >= box.y - 10 && y <= box.y + box.h + 10) {
+    ajuste.arrastre = 'mover';
+    ajuste.offset = { dx: x - box.x, dy: y - box.y };
+  } else {
+    ajuste.arrastre = null;
+  }
+  if (ajuste.arrastre) e.preventDefault();
+});
+canvas.addEventListener('pointermove', (e) => {
+  if (calibrando !== 'contornoAjustar' || !ajuste || !ajuste.arrastre) return;
+  const { x, y } = coordsCanvasDesdeEvento(e);
+  const box = ajuste.box;
+  if (ajuste.arrastre === 'mover') {
+    box.x = x - ajuste.offset.dx;
+    box.y = y - ajuste.offset.dy;
+  } else if (ajuste.arrastre === 'resizeAncho') {
+    box.w = Math.max(24, x - box.x);
+  } else if (ajuste.arrastre === 'resizeAlto') {
+    box.h = Math.max(24, y - box.y);
+  }
+  redibujar();
+  e.preventDefault();
+});
+canvas.addEventListener('pointerup', () => { if (ajuste) ajuste.arrastre = null; });
+canvas.addEventListener('pointercancel', () => { if (ajuste) ajuste.arrastre = null; });
+
+confirmarAjusteBtn.addEventListener('click', () => {
+  calibracion.verticesReal = verticesDesdeAjuste();
+  calibrando = null;
+  confirmarAjusteRow.style.display = 'none';
+  ajuste = null;
+  canvas.style.touchAction = 'pan-x pan-y';
+  calcularPuntajes();
+  redibujar();
 });
 
 
@@ -1335,6 +1426,9 @@ function handleFileObject(file) {
     calibrandoRadiosTemp = [];
     calibrandoCirculoTemp = [];
     if (terminarContornoRow) terminarContornoRow.style.display = 'none';
+    ajuste = null;
+    if (confirmarAjusteRow) confirmarAjusteRow.style.display = 'none';
+    canvas.style.touchAction = 'pan-x pan-y';
     puntajeInfo.style.display = 'none';
     tapadoAnteriores = null;
     tapadoSiBtn.style.background = 'var(--panel-2)';
@@ -1491,10 +1585,33 @@ function redibujar() {
   if (calibracion && calibracion.tipo === 'contorno' && calibracion.verticesReal) {
     dibujarPoligono(calibracion.verticesReal, true);
   }
-  if (calibracion && calibracion.tipo === 'contorno' && calibracion.p1 && !calibracion.p2) {
-    ctx.beginPath();
-    ctx.arc(calibracion.p1.x, calibracion.p1.y, 4, 0, 2 * Math.PI);
-    ctx.fill();
+  // silueta arrastrable/ajustable mientras se está reposicionando
+  if (calibrando === 'contornoAjustar' && ajuste) {
+    dibujarPoligono(verticesDesdeAjuste(), true);
+    const box = ajuste.box;
+    ctx.setLineDash([5, 5]);
+    ctx.strokeRect(box.x, box.y, box.w, box.h);
+    ctx.setLineDash([]);
+
+    const hAncho = { x: box.x + box.w, y: box.y + box.h / 2 };
+    const hAlto = { x: box.x + box.w / 2, y: box.y + box.h };
+
+    [[hAncho, '↔'], [hAlto, '↕']].forEach(([h, simbolo]) => {
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, 13, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000';
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(simbolo, h.x, h.y);
+      ctx.fillStyle = '#ffd60a'; // vuelve al color de calibración para el próximo dibujo
+    });
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
   }
 
   detecciones.forEach((d, i) => {
@@ -1529,7 +1646,7 @@ function aplicarZoom() {
   zoomLabel.textContent = zoomPct + '%';
 }
 zoomInBtn.addEventListener('click', () => { zoomPct = Math.min(300, zoomPct + 25); aplicarZoom(); });
-zoomOutBtn.addEventListener('click', () => { zoomPct = Math.max(100, zoomPct - 25); aplicarZoom(); });
+zoomOutBtn.addEventListener('click', () => { zoomPct = Math.max(10, zoomPct - 25); aplicarZoom(); });
 
 // ---------- modo de edición: agregar/borrar vs marcar previo/nuevo ----------
 let modoEdicion = 'editar'; // 'editar' | 'marcar'
@@ -1546,6 +1663,8 @@ modoMarcarBtn.addEventListener('click', () => setModoEdicion('marcar'));
 setModoEdicion('editar');
 
 canvas.addEventListener('click', (e) => {
+  if (calibrando === 'contornoAjustar') return; // el arrastre ya lo maneja pointerdown/move/up
+
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
   const scaleY = canvas.height / rect.height;
@@ -1627,24 +1746,6 @@ canvas.addEventListener('click', (e) => {
     } else {
       contornoEstado.textContent = `${calibrandoContornoTemp.length} punto(s) trazados — necesitás al menos 3.`;
     }
-    redibujar();
-    return;
-  }
-  if (calibrando === 'contornoP1') {
-    calibracion.p1 = { x, y };
-    calibrando = 'contornoP2';
-    puntajeInfo.innerHTML = '👉 Ahora tocá la <b>esquina inferior-derecha</b> del área de la zona.';
-    redibujar();
-    return;
-  }
-  if (calibrando === 'contornoP2') {
-    calibracion.p2 = { x, y };
-    calibracion.verticesReal = calibracion.vertices.map(v => ({
-      x: calibracion.p1.x + v.xf * (calibracion.p2.x - calibracion.p1.x),
-      y: calibracion.p1.y + v.yf * (calibracion.p2.y - calibracion.p1.y),
-    }));
-    calibrando = null;
-    calcularPuntajes();
     redibujar();
     return;
   }
