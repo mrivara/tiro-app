@@ -5,63 +5,82 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Contador de Impactos</title>
 <style>
+  :root {
+    /* tema oscuro tipo iOS -- negro con acento azul */
+    --bg: #111111;
+    --panel: #1c1c1e;
+    --panel-2: #2c2c2e;
+    --line: #2c2c2e;
+    --ink: #ffffff;
+    --ink-dim: #999999;
+    --ink-faint: #777777;
+    --brass: #0a84ff;
+    --brass-bright: #64b5ff;
+    --range-green: #34c759;
+    --target-red: #ff453a;
+    --miss-amber: #ff9f0a;
+    --steel: #8e8e93;
+    --sight-gold: #ffd60a;
+  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0; font-family: -apple-system, system-ui, sans-serif;
-    background: #111; color: #fff; padding: 16px; padding-bottom: 40px;
+    background: var(--bg); color: var(--ink); padding: 16px; padding-bottom: 40px;
+    accent-color: var(--brass);
   }
   h1 { font-size: 20px; margin: 0 0 4px; }
-  p.sub { color: #999; font-size: 13px; margin: 0 0 16px; }
+  p.sub { color: var(--ink-dim); font-size: 13px; margin: 0 0 16px; }
   .panel {
-    background: #1c1c1e; border-radius: 14px; padding: 16px; margin-bottom: 16px;
+    background: var(--panel);
+    border-radius: 14px; padding: 16px; margin-bottom: 16px;
   }
   .row { display: flex; gap: 10px; }
   label.btn, button.btn {
     flex: 1; display: flex; align-items: center; justify-content: center;
-    background: #0a84ff; color: #fff; padding: 14px; border-radius: 12px;
+    background: var(--brass); color: var(--ink); padding: 14px; border-radius: 12px;
     font-size: 16px; font-weight: 600; text-align: center; cursor: pointer;
     border: none; font-family: inherit;
   }
-  label.btn.secondary, button.btn.secondary { background: #2c2c2e; }
+  label.btn.secondary, button.btn.secondary { background: var(--panel-2); color: var(--ink); font-weight: 600; }
   input[type=file] { display: none; }
   input[type=text], input[type=password], input[type=date], select {
     width: 100%; padding: 10px; border-radius: 8px; border: none;
-    background: #2c2c2e; color: #fff; font-size: 15px; font-family: inherit;
+    background: var(--panel-2); color: var(--ink); font-size: 15px; font-family: inherit;
   }
-  input[readonly] { color: #999; }
+  input[readonly] { color: var(--ink-dim); }
   #canvasWrap { position: relative; margin-top: 16px; display: none; }
   canvas { width: 100%; border-radius: 12px; display: block; touch-action: pan-x pan-y; }
   #canvasScroll { -webkit-overflow-scrolling: touch; }
-  #status { font-size: 13px; color: #0a84ff; margin-top: 10px; min-height: 18px; }
+  #status { font-size: 13px; color: var(--brass-bright); margin-top: 10px; min-height: 18px; }
   #count { font-size: 34px; font-weight: 700; text-align: center; margin: 6px 0 0; }
-  #count span { font-size: 15px; color: #999; font-weight: 400; display: block; }
+  #count span { font-size: 15px; color: var(--ink-dim); font-weight: 400; display: block; }
   .controls { display: none; margin-top: 12px; }
   .controls .row { margin-top: 8px; }
   .slider-row { margin-top: 10px; }
-  .slider-row label { font-size: 13px; color: #999; display: block; margin-bottom: 4px; }
+  .slider-row label { font-size: 13px; color: var(--ink-dim); display: block; margin-bottom: 4px; }
   input[type=range] { width: 100%; }
-  .hint { font-size: 12px; color: #777; margin-top: 10px; line-height: 1.5; }
+  .hint { font-size: 12px; color: var(--ink-faint); margin-top: 10px; line-height: 1.5; }
   .step-badge {
-    display: inline-block; background: #0a84ff; color: #fff;
+    display: inline-block; background: var(--brass); color: var(--ink);
     border-radius: 20px; width: 20px; height: 20px; line-height: 20px;
     text-align: center; font-size: 12px; font-weight: 700; margin-right: 6px;
   }
   #loginGate {
     max-width: 360px; margin: 60px auto 0; text-align: center;
   }
-  #loginError { color: #ff453a; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  #loginError { color: var(--target-red); font-size: 13px; margin-top: 10px; min-height: 16px; }
   .diana-item {
-    padding: 10px 0; border-top: 1px solid #2c2c2e; font-size: 13px;
+    padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px;
     display: flex; justify-content: space-between; align-items: center;
   }
   .badge {
     font-size: 10px; padding: 2px 6px; border-radius: 6px; margin-left: 6px;
   }
-  .badge.publica { background: #0a84ff33; color: #64b5ff; }
-  .badge.propia { background: #34c75933; color: #34c759; }
+  .badge.publica { background: #0a84ff33; color: var(--brass-bright); }
+  .badge.propia { background: #34c75933; color: var(--range-green); }
   .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
-  .topbar span { font-size: 13px; color: #999; }
-  .topbar a { color: #ff453a; font-size: 13px; text-decoration: none; }
+  .topbar span { font-size: 13px; color: var(--ink-dim); }
+  .topbar a { color: var(--target-red); font-size: 13px; text-decoration: none; }
 </style>
 </head>
 <body>
@@ -136,7 +155,7 @@
         <label>Diana</label>
         <div style="display:flex; gap:10px; align-items:flex-start;">
           <select id="dianaSelect" style="flex:1;"></select>
-          <img id="referenciaThumb" style="display:none; width:25%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:1px solid #333;">
+          <img id="referenciaThumb" style="display:none; width:25%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:1px solid var(--line);">
         </div>
       </div>
       <div class="row" style="margin-top:8px;">
@@ -176,7 +195,7 @@
       </div>
       <div id="nuevaDianaEstado" class="hint"></div>
 
-      <div id="geometriaBloque" style="display:none; margin-top:14px; border-top:1px solid #2c2c2e; padding-top:12px;">
+      <div id="geometriaBloque" style="display:none; margin-top:14px; border-top:1px solid var(--line); padding-top:12px;">
         <b style="font-size:13px;">🎯 ¿Este blanco tiene zona de puntaje/impacto para marcar?</b>
         <div class="slider-row">
           <label>Tipo</label>
@@ -266,7 +285,7 @@
     <div id="canvasWrap">
       <div class="row" id="zoomControls" style="margin-bottom:8px;">
         <label class="btn secondary" id="zoomOut" style="flex:0 0 50px;">➖</label>
-        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:#2c2c2e; border-radius:12px; font-size:14px; color:#999;">
+        <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--panel-2); border-radius:12px; font-size:14px; color:var(--ink-dim);">
           🔍 <span id="zoomLabel">100%</span>
         </div>
         <label class="btn secondary" id="zoomIn" style="flex:0 0 50px;">➕</label>
@@ -495,7 +514,7 @@ async function refrescarListaUsuarios() {
               <option value="normal" ${u.role === 'normal' ? 'selected' : ''}>normal</option>
               <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>admin</option>
             </select>
-            <a href="#" class="borrar-usuario" data-id="${u.id}" data-nombre="${u.username}" style="color:#ff453a; font-size:13px; text-decoration:none;">🗑️</a>
+            <a href="#" class="borrar-usuario" data-id="${u.id}" data-nombre="${u.username}" style="color:var(--target-red); font-size:13px; text-decoration:none;">🗑️</a>
           </div>
         `}
     </div>
@@ -812,6 +831,18 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
   const nombre = nuevaDianaNombre.value.trim();
   if (!nombre) { nuevaDianaEstado.textContent = 'Ponele un nombre a la diana.'; return; }
 
+  // validación: si elegiste un tipo de zona, tiene que estar realmente
+  // calibrado -- si no, ANTES se guardaba igual con geometria=null en
+  // silencio, y recién se notaba mucho después al usar la diana
+  if (tipoGeometriaSelect.value === 'circulos' && (!calibracion || calibracion.tipo !== 'circulos')) {
+    nuevaDianaEstado.textContent = '⚠️ Elegiste "Anillos circulares" pero todavía no calibraste. Tocá "Calibrar anillos sobre la foto" y terminá los toques antes de guardar.';
+    return;
+  }
+  if (tipoGeometriaSelect.value === 'contorno' && (!calibracion || calibracion.tipo !== 'contorno')) {
+    nuevaDianaEstado.textContent = '⚠️ Elegiste "Contorno" pero todavía no lo terminaste. Tocá "Trazar contorno", marcá los puntos, y tocá "✅ Terminar contorno" antes de guardar.';
+    return;
+  }
+
   nuevaDianaEstado.textContent = 'Guardando...';
   let imagenPath = null;
 
@@ -986,8 +1017,8 @@ function calcularPuntajes() {
     });
     const dentro = detecciones.filter(d => d.dentro).length;
     puntajeInfo.style.display = 'block';
-    puntajeInfo.innerHTML = `<b style="color:#34c759;">${dentro} adentro</b> · ` +
-      `<b style="color:#ff9f0a;">${detecciones.length - dentro} afuera</b> (de ${detecciones.length} impactos)`;
+    puntajeInfo.innerHTML = `<b style="color:var(--range-green);">${dentro} adentro</b> · ` +
+      `<b style="color:var(--miss-amber);">${detecciones.length - dentro} afuera</b> (de ${detecciones.length} impactos)`;
     return;
   }
 
@@ -998,7 +1029,7 @@ function calcularPuntajes() {
   });
   const total = detecciones.reduce((s, d) => s + (d.puntaje || 0), 0);
   puntajeInfo.style.display = 'block';
-  puntajeInfo.innerHTML = `Puntaje total: <b style="color:#fff; font-size:16px;">${total}</b>` +
+  puntajeInfo.innerHTML = `Puntaje total: <b style="color:var(--ink); font-size:16px;">${total}</b>` +
     ` (${detecciones.length} impactos, promedio ${(detecciones.length ? (total/detecciones.length).toFixed(1) : 0)})`;
 }
 
@@ -1113,8 +1144,8 @@ let tapadoAnteriores = null; // null = sin elegir todavía | true | false
 
 function setTapado(valor) {
   tapadoAnteriores = valor;
-  tapadoSiBtn.style.background = valor === true ? '#0a84ff' : '#2c2c2e';
-  tapadoNoBtn.style.background = valor === false ? '#0a84ff' : '#2c2c2e';
+  tapadoSiBtn.style.background = valor === true ? 'var(--brass)' : 'var(--panel-2)';
+  tapadoNoBtn.style.background = valor === false ? 'var(--brass)' : 'var(--panel-2)';
   tapadoHint.textContent = valor === true
     ? 'Todos los impactos de esta foto van a contar como nuevos.'
     : 'Se va a comparar por coordenadas contra la ronda anterior.';
@@ -1136,14 +1167,14 @@ function renderListaRondas() {
     return;
   }
   listaRondas.innerHTML = rondas.map(r => `
-    <div style="padding:8px 0; border-top:1px solid #2c2c2e; font-size:13px;">
+    <div style="padding:8px 0; border-top:1px solid var(--line); font-size:13px;">
       <div style="display:flex; justify-content:space-between;">
         <b>${r.tirador || '(sin nombre)'}</b>
         <span>${r.fecha}</span>
       </div>
-      <div style="color:#999; margin-top:2px;">
+      <div style="color:var(--ink-dim); margin-top:2px;">
         ${r.dianaNombre || r.diana} · ${r.distancia}m ·
-        ${r.count} imp.${r.nuevos != null ? ` (${r.nuevos} nuevos)` : ''}${r.puntajeTotal != null ? ` · ${r.puntajeTotal} pts` : ''}
+        ${r.count} imp.${r.nuevos != null ? ` (${r.nuevos} nuevos)` : ''}${r.puntajeTotal != null ? ` · ${r.puntajeTotal} pts` : ''}${r.acertadosZona != null ? ` · ${r.acertadosZona} adentro` : ''}
       </div>
     </div>
   `).join('');
@@ -1176,6 +1207,7 @@ document.getElementById('guardarRonda').addEventListener('click', async () => {
     count: detecciones.length,
     nuevos,
     puntajeTotal: calibracion ? detecciones.reduce((s, d) => s + (d.puntaje || 0), 0) : null,
+    acertadosZona,
   };
   await guardarRondaDB(ronda);
   await refrescarRondas();
@@ -1223,7 +1255,7 @@ function compararConRondaAnterior() {
     comparacionInfo.style.display = 'block';
     comparacionInfo.innerHTML =
       `Marcaste que tapaste los impactos de la ronda de <b>${anterior.fecha}</b> — ` +
-      `<b style="color:#34c759;">los ${detecciones.length} de esta foto cuentan como nuevos</b>.`;
+      `<b style="color:var(--range-green);">los ${detecciones.length} de esta foto cuentan como nuevos</b>.`;
     return;
   }
 
@@ -1239,15 +1271,15 @@ function compararConRondaAnterior() {
   comparacionInfo.innerHTML =
     `Comparado contra la ronda de <b>${anterior.tirador || '(sin nombre)'}</b> del ` +
     `<b>${anterior.fecha}</b> (${anterior.count} imp.): ` +
-    `<b style="color:#34c759;">${nuevos} nuevos</b>, ${detecciones.length - nuevos} ya estaban.`;
+    `<b style="color:var(--range-green);">${nuevos} nuevos</b>, ${detecciones.length - nuevos} ya estaban.`;
 }
 
 function setModo(nuevo) {
   modo = nuevo;
   sliderHough.style.display = modo === 'hough' ? 'block' : 'none';
   sliderBlanco.style.display = modo === 'blanco' ? 'block' : 'none';
-  modeHoughBtn.style.background = modo === 'hough' ? '#0a84ff' : '#2c2c2e';
-  modeBlancoBtn.style.background = modo === 'blanco' ? '#0a84ff' : '#2c2c2e';
+  modeHoughBtn.style.background = modo === 'hough' ? 'var(--brass)' : 'var(--panel-2)';
+  modeBlancoBtn.style.background = modo === 'blanco' ? 'var(--brass)' : 'var(--panel-2)';
   if (!srcMat) return;
   if (modoAgregarDiana) redibujar(); else analizar();
 }
@@ -1305,8 +1337,8 @@ function handleFileObject(file) {
     if (terminarContornoRow) terminarContornoRow.style.display = 'none';
     puntajeInfo.style.display = 'none';
     tapadoAnteriores = null;
-    tapadoSiBtn.style.background = '#2c2c2e';
-    tapadoNoBtn.style.background = '#2c2c2e';
+    tapadoSiBtn.style.background = 'var(--panel-2)';
+    tapadoNoBtn.style.background = 'var(--panel-2)';
     tapadoHint.textContent = 'Elegí una opción — determina si comparamos por coordenadas contra la ronda anterior o si todo cuenta como nuevo.';
 
     if (modoAgregarDiana) redibujar(); else analizar();
@@ -1503,8 +1535,8 @@ zoomOutBtn.addEventListener('click', () => { zoomPct = Math.max(100, zoomPct - 2
 let modoEdicion = 'editar'; // 'editar' | 'marcar'
 function setModoEdicion(m) {
   modoEdicion = m;
-  modoEditarBtn.style.background = m === 'editar' ? '#0a84ff' : '#2c2c2e';
-  modoMarcarBtn.style.background = m === 'marcar' ? '#0a84ff' : '#2c2c2e';
+  modoEditarBtn.style.background = m === 'editar' ? 'var(--brass)' : 'var(--panel-2)';
+  modoMarcarBtn.style.background = m === 'marcar' ? 'var(--brass)' : 'var(--panel-2)';
   modoEdicionHint.textContent = m === 'editar'
     ? 'Tocá un impacto para borrarlo, o un punto vacío para agregar uno.'
     : 'Tocá un impacto para alternar entre 🟢 nuevo y ⚪ ya existía (útil si estaba tapado y no lo comparó bien).';
@@ -1589,8 +1621,12 @@ canvas.addEventListener('click', (e) => {
   }
   if (calibrando === 'contorno') {
     calibrandoContornoTemp.push({ x, y });
-    contornoEstado.textContent = `${calibrandoContornoTemp.length} puntos trazados. Seguí tocando el borde, o "Terminar" si ya alcanza.`;
-    if (calibrandoContornoTemp.length >= 3) terminarContornoRow.style.display = 'flex';
+    if (calibrandoContornoTemp.length >= 3) {
+      contornoEstado.innerHTML = `${calibrandoContornoTemp.length} puntos trazados. Seguí tocando el borde, o tocá <b style="color:var(--brass-bright);">"✅ Terminar contorno"</b> (más abajo) cuando ya alcance.`;
+      terminarContornoRow.style.display = 'flex';
+    } else {
+      contornoEstado.textContent = `${calibrandoContornoTemp.length} punto(s) trazados — necesitás al menos 3.`;
+    }
     redibujar();
     return;
   }
