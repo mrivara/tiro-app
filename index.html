@@ -5,89 +5,117 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Contador de Impactos</title>
 <style>
+
   :root {
-    /* tema oscuro tipo iOS -- negro con acento azul */
-    --bg: #111111;
-    --panel: #1c1c1e;
-    --panel-2: #2c2c2e;
-    --line: #2c2c2e;
-    --ink: #ffffff;
-    --ink-dim: #999999;
-    --ink-faint: #777777;
-    --brass: #0a84ff;
-    --brass-bright: #64b5ff;
-    --range-green: #34c759;
-    --target-red: #ff453a;
-    --miss-amber: #ff9f0a;
-    --steel: #8e8e93;
-    --sight-gold: #ffd60a;
+    --bg:#0b0d10; --panel:#15181d; --panel-2:#20242b; --line:#2b3038;
+    --ink:#f5f7fa; --ink-dim:#a7adb7; --ink-faint:#737a86;
+    --brass:#0a84ff; --brass-bright:#64b5ff; --range-green:#34c759;
+    --target-red:#ff453a; --miss-amber:#ff9f0a; --steel:#8e8e93; --sight-gold:#ffd60a;
+    --radius-lg:18px; --radius-md:13px; --radius-sm:10px;
   }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { background:var(--bg); }
   body {
-    margin: 0; font-family: -apple-system, system-ui, sans-serif;
-    background: var(--bg); color: var(--ink); padding: 16px; padding-bottom: 40px;
-    accent-color: var(--brass);
+    margin:0; min-height:100vh; width:100%;
+    max-width:760px; margin-left:auto; margin-right:auto;
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif;
+    background:radial-gradient(circle at 50% -12%,rgba(10,132,255,.13),transparent 38%),var(--bg);
+    color:var(--ink); padding:12px 14px 42px; accent-color:var(--brass);
   }
-  h1 { font-size: 20px; margin: 0 0 4px; }
-  p.sub { color: var(--ink-dim); font-size: 13px; margin: 0 0 16px; }
-  .panel {
-    background: var(--panel);
-    border-radius: 14px; padding: 16px; margin-bottom: 16px;
+  body::before { content:""; position:fixed; inset:0; pointer-events:none;
+    background:linear-gradient(180deg,rgba(255,255,255,.018),transparent 18%); z-index:-1; }
+  h1 { font-size:22px; line-height:1.15; letter-spacing:-.4px; margin:0 0 5px; font-weight:750; }
+  p.sub { color:var(--ink-dim); font-size:13px; line-height:1.45; margin:0 0 18px; }
+  .panel { background:rgba(21,24,29,.96); border:1px solid rgba(255,255,255,.045);
+    border-radius:var(--radius-lg); padding:16px; margin-bottom:13px;
+    box-shadow:0 7px 24px rgba(0,0,0,.13); }
+  .panel > b { font-size:15px; letter-spacing:-.1px; }
+  .row { display:flex; gap:9px; }
+  label.btn,button.btn { flex:1; min-height:48px; display:flex; align-items:center; justify-content:center;
+    gap:7px; background:var(--brass); color:#fff; padding:12px 14px; border-radius:var(--radius-md);
+    font-size:15px; font-weight:650; line-height:1.1; text-align:center; cursor:pointer;
+    border:1px solid rgba(255,255,255,.06); font-family:inherit;
+    transition:transform .12s ease,filter .12s ease,background .12s ease; }
+  label.btn:active,button.btn:active { transform:scale(.98); filter:brightness(.92); }
+  label.btn.secondary,button.btn.secondary { background:var(--panel-2); color:var(--ink);
+    border-color:rgba(255,255,255,.055); font-weight:600; }
+  input[type=file] { display:none; }
+  input[type=text],input[type=password],input[type=date],select {
+    width:100%; min-height:44px; padding:10px 12px; border-radius:var(--radius-sm);
+    border:1px solid rgba(255,255,255,.045); outline:none; background:var(--panel-2);
+    color:var(--ink); font-size:15px; font-family:inherit; }
+  input:focus,select:focus { border-color:rgba(10,132,255,.72); box-shadow:0 0 0 3px rgba(10,132,255,.12); }
+  input[readonly] { color:var(--ink-dim); }
+  #canvasWrap { position:relative; margin-top:12px; display:none; }
+  canvas { width:100%; border-radius:14px; display:block; touch-action:pan-x pan-y; background:#08090b; }
+  #canvasScroll { -webkit-overflow-scrolling:touch; border:1px solid rgba(255,255,255,.06); background:#08090b; }
+  #status { font-size:13px; color:var(--brass-bright); margin-top:9px; min-height:18px; }
+  #status:empty { display:none; }
+  #count { font-size:38px; line-height:1; font-weight:780; letter-spacing:-1.2px; text-align:center; margin:7px 0 2px; }
+  #count span { font-size:13px; color:var(--ink-dim); font-weight:450; display:block; margin-top:7px; letter-spacing:0; }
+  .controls { display:none; margin-top:14px; }
+  .controls .row { margin-top:8px; }
+  .slider-row { margin-top:12px; }
+  .slider-row label { font-size:12px; color:var(--ink-dim); display:block; margin-bottom:6px; line-height:1.35; }
+  input[type=range] { width:100%; height:28px; }
+  .hint { font-size:12px; color:var(--ink-faint); margin-top:10px; line-height:1.5; }
+  .step-badge { display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
+    background:rgba(10,132,255,.16); color:var(--brass-bright); border:1px solid rgba(10,132,255,.28);
+    border-radius:50%; width:23px; height:23px; line-height:1; text-align:center; font-size:11px;
+    font-weight:750; margin-right:7px; }
+  #loginGate { width:min(100%,390px); margin:10vh auto 0; text-align:center; }
+  #loginGate h1 { font-size:25px; margin-bottom:7px; }
+  #loginGate .panel { margin-top:22px; text-align:left; padding:18px; }
+  #loginError { color:var(--target-red); font-size:13px; margin-top:10px; min-height:16px; text-align:center; }
+  .diana-item { padding:11px 0; border-top:1px solid var(--line); font-size:13px;
+    display:flex; justify-content:space-between; align-items:center; }
+  .badge { font-size:10px; padding:4px 7px; border-radius:999px; margin-left:6px; font-weight:650; }
+  .badge.publica { background:rgba(10,132,255,.13); color:var(--brass-bright); }
+  .badge.propia { background:rgba(52,199,89,.13); color:var(--range-green); }
+  .topbar { display:flex; justify-content:space-between; align-items:center; gap:12px;
+    margin:2px 1px 16px; padding:4px 1px 10px; border-bottom:1px solid rgba(255,255,255,.045); }
+  .topbar span { font-size:12px; color:var(--ink-dim); }
+  .topbar > span:first-child { display:flex; align-items:center; gap:3px; }
+  .topbar a { color:var(--target-red); font-size:12px; text-decoration:none; padding:7px 8px; border-radius:8px; }
+  #referenciaThumb { box-shadow:0 3px 12px rgba(0,0,0,.22); }
+  #zoomControls .btn { min-height:42px; padding:8px; }
+  #zoomLabel { font-weight:600; color:var(--ink-dim); }
+  #ajustesAvanzadosToggle { padding:9px 10px; border-radius:10px; background:rgba(255,255,255,.025); }
+  #puntajeInfo,#comparacionInfo { padding:10px 12px; border-radius:10px; background:rgba(255,255,255,.035); }
+  #comparacionInfo { background:rgba(10,132,255,.06); border:1px solid rgba(10,132,255,.08); }
+  input[type=checkbox] { width:19px!important; height:19px; flex:0 0 auto; }
+
+  .app-brand { display:flex; align-items:center; justify-content:center; gap:10px; }
+  .app-brand .app-logo { width:32px; height:32px; flex:0 0 32px; filter:drop-shadow(0 4px 12px rgba(10,132,255,.18)); }
+  #loginGate .app-brand .app-logo { width:48px; height:48px; flex-basis:48px; }
+  .brand-title { display:inline-flex; align-items:center; gap:9px; }
+  .brand-title .app-logo { width:28px; height:28px; }
+  .ui-icon { width:18px; height:18px; display:inline-block; vertical-align:-4px; object-fit:contain; }
+
+  @media (max-width:600px) {
+    body { max-width:520px; padding:10px 12px 34px; }
+    .panel { padding:14px; }
+    h1 { font-size:21px; }
+    label.btn,button.btn { min-height:47px; font-size:14px; padding:11px 10px; }
+    .topbar { margin-bottom:13px; }
   }
-  .row { display: flex; gap: 10px; }
-  label.btn, button.btn {
-    flex: 1; display: flex; align-items: center; justify-content: center;
-    background: var(--brass); color: var(--ink); padding: 14px; border-radius: 12px;
-    font-size: 16px; font-weight: 600; text-align: center; cursor: pointer;
-    border: none; font-family: inherit;
+  @media (max-width:430px) {
+    body { padding-left:10px; padding-right:10px; }
+    .app-brand { gap:8px; }
+    .app-brand .app-logo { width:29px; height:29px; flex-basis:29px; }
+    .brand-title .app-logo { width:25px; height:25px; }
+    .panel { border-radius:16px; }
+    .row { gap:8px; }
+    #count { font-size:36px; }
   }
-  label.btn.secondary, button.btn.secondary { background: var(--panel-2); color: var(--ink); font-weight: 600; }
-  input[type=file] { display: none; }
-  input[type=text], input[type=password], input[type=date], select {
-    width: 100%; padding: 10px; border-radius: 8px; border: none;
-    background: var(--panel-2); color: var(--ink); font-size: 15px; font-family: inherit;
-  }
-  input[readonly] { color: var(--ink-dim); }
-  #canvasWrap { position: relative; margin-top: 16px; display: none; }
-  canvas { width: 100%; border-radius: 12px; display: block; touch-action: pan-x pan-y; }
-  #canvasScroll { -webkit-overflow-scrolling: touch; }
-  #status { font-size: 13px; color: var(--brass-bright); margin-top: 10px; min-height: 18px; }
-  #count { font-size: 34px; font-weight: 700; text-align: center; margin: 6px 0 0; }
-  #count span { font-size: 15px; color: var(--ink-dim); font-weight: 400; display: block; }
-  .controls { display: none; margin-top: 12px; }
-  .controls .row { margin-top: 8px; }
-  .slider-row { margin-top: 10px; }
-  .slider-row label { font-size: 13px; color: var(--ink-dim); display: block; margin-bottom: 4px; }
-  input[type=range] { width: 100%; }
-  .hint { font-size: 12px; color: var(--ink-faint); margin-top: 10px; line-height: 1.5; }
-  .step-badge {
-    display: inline-block; background: var(--brass); color: var(--ink);
-    border-radius: 20px; width: 20px; height: 20px; line-height: 20px;
-    text-align: center; font-size: 12px; font-weight: 700; margin-right: 6px;
-  }
-  #loginGate {
-    max-width: 360px; margin: 60px auto 0; text-align: center;
-  }
-  #loginError { color: var(--target-red); font-size: 13px; margin-top: 10px; min-height: 16px; }
-  .diana-item {
-    padding: 10px 0; border-top: 1px solid var(--line); font-size: 13px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .badge {
-    font-size: 10px; padding: 2px 6px; border-radius: 6px; margin-left: 6px;
-  }
-  .badge.publica { background: #0a84ff33; color: var(--brass-bright); }
-  .badge.propia { background: #34c75933; color: var(--range-green); }
-  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px; }
-  .topbar span { font-size: 13px; color: var(--ink-dim); }
-  .topbar a { color: var(--target-red); font-size: 13px; text-decoration: none; }
+
 </style>
 </head>
 <body>
 
   <!-- ============== PANTALLA DE LOGIN ============== -->
   <div id="loginGate">
-    <h1>🎯 Contador de Impactos</h1>
+    <div class="app-brand"><img class="app-logo" width="48" height="48" src="assets/icons/logo.svg" alt="" aria-hidden="true"><h1>Contador de Impactos</h1></div>
     <p class="sub">Iniciá sesión para continuar</p>
     <div class="panel">
       <div class="slider-row">
@@ -142,7 +170,9 @@
       </div>
     </div>
 
-    <h1>🎯 Contador de Impactos</h1>
+    <div id="appMain">
+
+    <div class="brand-title"><img class="app-logo" width="48" height="48" src="assets/icons/logo.svg" alt="" aria-hidden="true"><h1>Contador de Impactos</h1></div>
     <p class="sub">Corre en tu teléfono — solo las fotos y coordenadas suben a tu cuenta</p>
 
     <div class="panel" id="panelDatosSesion">
@@ -273,6 +303,18 @@
       <div id="status"></div>
     </div>
 
+    <div class="panel" id="puntajePanel" style="display:none;">
+      <b id="puntajePanelTitulo">🎯 Puntaje / zona</b>
+      <p class="hint" id="puntajePanelHint"></p>
+      <div class="row">
+        <label class="btn secondary" id="calibrarBtn">📍 Calibrar</label>
+      </div>
+      <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
+      <div class="row" id="confirmarAjusteRow" style="display:none; margin-top:10px;">
+        <button class="btn" id="confirmarAjusteBtn">✅ Confirmar posición</button>
+      </div>
+    </div>
+
     <div class="panel" id="tapadoBloque" style="display:none;">
       <label><b>¿Tapaste los impactos anteriores antes de sacar esta foto?</b></label>
       <div class="row" style="margin-top:10px;">
@@ -316,6 +358,12 @@
           </div>
         </div>
 
+        <div class="row" id="ajustesAvanzadosToggle" style="margin-top:14px; cursor:pointer; justify-content:flex-start; align-items:center; gap:6px;">
+          <span style="font-size:13px; color:var(--ink-dim);">⚙️ Ajustes de detección (avanzado) <span id="ajustesAvanzadosFlecha">▾</span></span>
+        </div>
+
+        <div id="ajustesAvanzadosPanel" style="display:none; margin-top:10px;">
+
         <div class="slider-row" id="bloqueTipoBlanco">
           <label>Tipo de blanco</label>
           <div class="row">
@@ -352,6 +400,8 @@
             <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
           </div>
         </div>
+
+        </div><!-- /ajustesAvanzadosPanel -->
       </div>
     </div>
 
@@ -361,18 +411,6 @@
       blanco). "Papel blanco liso" es más simple y preciso, pero solo anda
       bien si no hay ningún círculo negro grande en la foto.
     </p>
-
-    <div class="panel" id="puntajePanel" style="display:none;">
-      <b id="puntajePanelTitulo">🎯 Puntaje / zona</b>
-      <p class="hint" id="puntajePanelHint"></p>
-      <div class="row">
-        <label class="btn secondary" id="calibrarBtn">📍 Calibrar</label>
-      </div>
-      <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
-      <div class="row" id="confirmarAjusteRow" style="display:none; margin-top:10px;">
-        <button class="btn" id="confirmarAjusteBtn">✅ Confirmar posición</button>
-      </div>
-    </div>
 
     <div class="panel" id="sesionPanel" style="display:none;">
       <b>📋 Sesión</b>
@@ -397,6 +435,8 @@
       trípode/monóculo fijo ayuda tanto) — si el encuadre cambia mucho entre
       fotos, la comparación se desalinea.
     </p>
+
+    </div><!-- /appMain -->
 
   </div>
 
@@ -497,10 +537,13 @@ const adminNuevoRol = document.getElementById('adminNuevoRol');
 const adminEstado = document.getElementById('adminEstado');
 const adminListaUsuarios = document.getElementById('adminListaUsuarios');
 
+const appMain = document.getElementById('appMain');
 abrirAdminPanel.addEventListener('click', () => {
   const abierto = adminPanelBody.style.display === 'block';
   adminPanelBody.style.display = abierto ? 'none' : 'block';
   abrirAdminPanel.textContent = abierto ? 'Abrir' : 'Cerrar';
+  // vista separada: mientras el panel de admin está abierto, se oculta el resto de la app
+  appMain.style.display = abierto ? 'block' : 'none';
 });
 
 async function refrescarListaUsuarios() {
@@ -751,6 +794,7 @@ document.getElementById('abrirAgregarDiana').addEventListener('click', () => {
   document.getElementById('bloqueModoEdicion').style.display = 'none';
   document.getElementById('bloqueSliders').style.display = 'none';
   document.getElementById('count').style.display = 'none';
+  actualizarAjustesAvanzados();
   limpiarCanvasActual();
   agregarDianaPanel.style.display = 'block';
   agregarDianaPanel.scrollIntoView({ behavior: 'smooth' });
@@ -767,6 +811,8 @@ function cerrarModoAgregarDiana() {
   document.getElementById('bloqueModoEdicion').style.display = 'block';
   document.getElementById('bloqueSliders').style.display = 'block';
   document.getElementById('count').style.display = 'block';
+  ajustesAvanzadosAbiertos = false;
+  actualizarAjustesAvanzados();
   limpiarCanvasActual();
   panelDatosSesion.style.display = 'block';
   panelFotoBlanco.style.display = 'block';
@@ -926,6 +972,22 @@ const sliderHough = document.getElementById('sliderHough');
 const sliderBlanco = document.getElementById('sliderBlanco');
 const modeHoughBtn = document.getElementById('modeHough');
 const modeBlancoBtn = document.getElementById('modeBlanco');
+const ajustesAvanzadosToggle = document.getElementById('ajustesAvanzadosToggle');
+const ajustesAvanzadosPanel = document.getElementById('ajustesAvanzadosPanel');
+const ajustesAvanzadosFlecha = document.getElementById('ajustesAvanzadosFlecha');
+let ajustesAvanzadosAbiertos = false; // colapsado por defecto: tipo de blanco/sensibilidad/radio ya se recuperan de la diana
+
+function actualizarAjustesAvanzados() {
+  const mostrarToggle = !modoAgregarDiana;
+  ajustesAvanzadosToggle.style.display = mostrarToggle ? 'flex' : 'none';
+  ajustesAvanzadosPanel.style.display = (mostrarToggle && ajustesAvanzadosAbiertos) ? 'block' : 'none';
+  ajustesAvanzadosFlecha.textContent = ajustesAvanzadosAbiertos ? '▴' : '▾';
+}
+
+ajustesAvanzadosToggle.addEventListener('click', () => {
+  ajustesAvanzadosAbiertos = !ajustesAvanzadosAbiertos;
+  actualizarAjustesAvanzados();
+});
 const modoEditarBtn = document.getElementById('modoEditarBtn');
 const modoMarcarBtn = document.getElementById('modoMarcarBtn');
 const modoEdicionHint = document.getElementById('modoEdicionHint');
@@ -1414,6 +1476,8 @@ function handleFileObject(file) {
     document.getElementById('bloqueModoEdicion').style.display = modoAgregarDiana ? 'none' : 'block';
     document.getElementById('bloqueSliders').style.display = modoAgregarDiana ? 'none' : 'block';
     document.getElementById('count').style.display = modoAgregarDiana ? 'none' : 'block';
+    ajustesAvanzadosAbiertos = false;
+    actualizarAjustesAvanzados();
     zoomPct = 100;
     aplicarZoom();
 
@@ -1615,7 +1679,9 @@ function redibujar() {
   }
 
   detecciones.forEach((d, i) => {
-    const color = d.esNuevo === false ? '#8e8e93' : '#34c759';
+    let color = '#34c759'; // verde: nuevo (y adentro de la zona, si aplica)
+    if (d.esNuevo === false) color = '#8e8e93'; // gris: ya estaba de una ronda anterior
+    else if (d.dentro === false) color = '#ff453a'; // rojo: nuevo pero fuera de la zona
     ctx.beginPath();
     ctx.arc(d.x, d.y, Math.max(d.r + 4, 12), 0, 2 * Math.PI);
     ctx.strokeStyle = color;
