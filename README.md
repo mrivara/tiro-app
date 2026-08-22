@@ -1,6 +1,29 @@
-# Tiro App — Fase 1 mobile corregida
+# Tiro App — Fase 2: Responsive iOS + Android
 
-Se corrigió la inconsistencia visual entre login y aplicación.
-El login y la app usan ahora la misma capa visual responsive, con ancho máximo controlado y adaptación móvil.
+Base: Fase 1 validada en producción.
 
-No se modificó la lógica JavaScript, OpenCV, Supabase, IndexedDB, IDs ni event listeners.
+## Objetivo
+Adaptar la presentación para iPhone, Android, tablets y escritorio manteniendo una única aplicación web.
+
+## Regla
+No se modificó la funcionalidad:
+- no se modificó JavaScript;
+- no se modificó OpenCV;
+- no se modificó Supabase;
+- no se modificó IndexedDB;
+- no se modificaron IDs ni event listeners.
+
+Los cambios de esta fase son de CSS/layout y comportamiento visual responsive.
+
+## Incluye
+- Safe areas para iPhone/notch/Dynamic Island.
+- `100dvh` para viewport móvil moderno.
+- Controles táctiles de tamaño cómodo.
+- Adaptación para teléfonos pequeños.
+- Adaptación para landscape.
+- Canvas preparado para conservar resolución real y desplazarse cuando corresponda.
+- Mejor comportamiento en tablets y desktop.
+- Preferencia de reducción de movimiento.
+
+## Próximo paso
+Validar en iPhone y Android. Si esta fase queda aprobada, continuar con el reemplazo sistemático de emojis por los SVG propios de `assets/icons/`.

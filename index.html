@@ -109,6 +109,256 @@
     #count { font-size:36px; }
   }
 
+
+  /* ============================================================
+     TIRO APP — FASE 2: RESPONSIVE iOS + ANDROID
+     Solo presentación/layout. No modifica lógica ni comportamiento JS.
+     ============================================================ */
+
+  :root {
+    --app-max-width: 760px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+  }
+
+  html {
+    min-height: 100%;
+    background: var(--bg);
+    overscroll-behavior-x: none;
+  }
+
+  body {
+    width: 100%;
+    max-width: var(--app-max-width);
+    min-height: 100dvh;
+    margin: 0 auto;
+    padding-top: max(12px, var(--safe-top));
+    padding-right: max(12px, var(--safe-right));
+    padding-bottom: max(28px, var(--safe-bottom));
+    padding-left: max(12px, var(--safe-left));
+    overflow-x: hidden;
+  }
+
+  /* Evita que los controles internos generen overflow horizontal */
+  .panel,
+  #appContent,
+  #appMain,
+  #adminPanel,
+  #agregarDianaPanel,
+  #resultPanel,
+  #sesionPanel,
+  #canvasWrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  /* El canvas conserva sus dimensiones reales para OpenCV.
+     La visualización se adapta al viewport. */
+  #canvasScroll {
+    width: 100%;
+    max-width: 100%;
+    overflow: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  canvas {
+    max-width: none;
+    height: auto;
+  }
+
+  /* Área de controles: todos los botones tienen una zona táctil cómoda */
+  label.btn,
+  button.btn {
+    min-height: 48px;
+    touch-action: manipulation;
+  }
+
+  /* Selects e inputs cómodos en iOS/Android */
+  input[type=text],
+  input[type=password],
+  input[type=date],
+  select {
+    min-height: 46px;
+    touch-action: manipulation;
+  }
+
+  /* Header */
+  .topbar {
+    min-height: 38px;
+    position: relative;
+  }
+
+  .topbar a {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Login: centrado estable incluso en pantallas altas/bajas */
+  #loginGate {
+    width: min(100%, 390px);
+    min-height: calc(100dvh - 40px);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-top: 8vh;
+    padding-bottom: 8vh;
+  }
+
+  #loginGate .panel {
+    width: 100%;
+  }
+
+  /* En teléfonos pequeños, los botones de dos columnas pasan a una columna.
+     Esto evita controles demasiado estrechos. */
+  @media (max-width: 390px) {
+    body {
+      padding-left: max(10px, var(--safe-left));
+      padding-right: max(10px, var(--safe-right));
+    }
+
+    .panel {
+      padding: 13px;
+      border-radius: 16px;
+    }
+
+    .row {
+      gap: 8px;
+    }
+
+    #panelFotoBlanco > .row,
+    #panelFotoBlanco .row,
+    #tapadoBloque .row {
+      flex-wrap: wrap;
+    }
+
+    #panelFotoBlanco .row > .btn,
+    #tapadoBloque .row > .btn {
+      min-width: calc(50% - 4px);
+    }
+
+    #zoomControls {
+      flex-wrap: nowrap !important;
+    }
+
+    #loginGate {
+      padding-top: 5vh;
+      padding-bottom: 5vh;
+    }
+
+    #loginGate .panel {
+      padding: 15px;
+    }
+  }
+
+  /* Teléfonos muy angostos */
+  @media (max-width: 340px) {
+    h1 { font-size: 20px; }
+
+    .brand-title h1,
+    #loginGate .app-brand h1 {
+      font-size: 20px;
+    }
+
+    label.btn,
+    button.btn {
+      font-size: 13px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    #panelFotoBlanco .row > .btn,
+    #tapadoBloque .row > .btn {
+      min-width: 100%;
+    }
+
+    .topbar {
+      gap: 6px;
+    }
+
+    .topbar span {
+      font-size: 11px;
+    }
+  }
+
+  /* Tablets / móviles grandes */
+  @media (min-width: 600px) {
+    body {
+      padding-top: max(18px, var(--safe-top));
+      padding-bottom: max(40px, var(--safe-bottom));
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    #loginGate {
+      min-height: calc(100dvh - 80px);
+    }
+  }
+
+  /* Desktop: mantenemos el mismo lenguaje de app, sin estirar controles. */
+  @media (min-width: 900px) {
+    body {
+      max-width: 820px;
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+
+  /* Evita zoom accidental sobre botones/inputs en navegadores móviles
+     sin alterar el viewport ni el comportamiento de la aplicación. */
+  @media (pointer: coarse) {
+    label.btn,
+    button.btn,
+    select,
+    input[type=date],
+    input[type=text],
+    input[type=password] {
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input[type=text],
+    input[type=password] {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+  }
+
+  /* Mejor lectura cuando el teclado virtual reduce el viewport */
+  @media (max-height: 620px) and (orientation: landscape) {
+    #loginGate {
+      min-height: auto;
+      padding-top: 24px;
+      padding-bottom: 24px;
+    }
+
+    #loginGate .panel {
+      margin-top: 12px;
+    }
+
+    body {
+      padding-top: max(8px, var(--safe-top));
+      padding-bottom: max(16px, var(--safe-bottom));
+    }
+  }
+
+  /* Respeta la preferencia de reducir movimiento del sistema */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      scroll-behavior: auto !important;
+      transition-duration: .01ms !important;
+      animation-duration: .01ms !important;
+    }
+  }
+
 </style>
 </head>
 <body>
