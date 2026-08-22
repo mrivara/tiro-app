@@ -433,6 +433,49 @@
     }
   }
 
+
+  /* ===== FASE 3 FIX: iconos dinámicos ===== */
+  #puntajePanelTitulo,
+  #calibrarBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  #puntajePanelTitulo::before,
+  #calibrarBtn::before {
+    content: "";
+    display: inline-block;
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+  }
+
+  #puntajePanelTitulo::before {
+    background-image: url("assets/icons/target.svg");
+  }
+
+  #calibrarBtn::before {
+    background-image: url("assets/icons/calibration.svg");
+  }
+
+  @media (max-width: 390px) {
+    #puntajePanelTitulo::before,
+    #calibrarBtn::before {
+      width: 18px;
+      height: 18px;
+      flex-basis: 18px;
+    }
+  }
+
+
+  .ui-icon {
+    filter: none;
+  }
+
 </style>
 </head>
 <body>
@@ -628,10 +671,10 @@
     </div>
 
     <div class="panel" id="puntajePanel" style="display:none;">
-      <b id="puntajePanelTitulo"><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Puntaje / zona</b>
+      <b id="puntajePanelTitulo">Puntaje / zona</b>
       <p class="hint" id="puntajePanelHint"></p>
       <div class="row">
-        <label class="btn secondary" id="calibrarBtn"><img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar</label>
+        <label class="btn secondary" id="calibrarBtn">Calibrar</label>
       </div>
       <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
       <div class="row" id="confirmarAjusteRow" style="display:none; margin-top:10px;">
@@ -1054,19 +1097,19 @@ function actualizarPanelPuntaje(preset) {
   if (!geometria) { calibracion = null; puntajeInfo.style.display = 'none'; return; }
 
   if (geometria.tipo === 'contorno') {
-    document.getElementById('puntajePanelTitulo').textContent = '<img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Zona (adentro / afuera)';
+    document.getElementById('puntajePanelTitulo').textContent = 'Zona (adentro / afuera)';
     document.getElementById('puntajePanelHint').innerHTML =
       'Tocá <b>3 esquinas</b> del área donde está la zona marcada (arriba-izq, ' +
       'arriba-der, abajo-izq) — con 3 puntos corrige también rotación y ' +
       'proporciones distintas entre fotos, no solo mover y escalar.';
-    calibrarBtn.textContent = '<img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar ubicación de la zona';
+    calibrarBtn.textContent = 'Calibrar ubicación de la zona';
   } else {
-    document.getElementById('puntajePanelTitulo').textContent = '<img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Puntaje';
+    document.getElementById('puntajePanelTitulo').textContent = 'Puntaje';
     document.getElementById('puntajePanelHint').innerHTML =
       'Tocá <b>2 puntos opuestos</b> del anillo más grande (un lado, y el ' +
       'lado contrario cruzando el centro). Con eso calcula el centro y el ' +
       'puntaje de cada impacto.';
-    calibrarBtn.textContent = '<img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar (2 toques opuestos)';
+    calibrarBtn.textContent = 'Calibrar (2 toques opuestos)';
   }
 }
 
@@ -1216,7 +1259,7 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
     return;
   }
   if (tipoGeometriaSelect.value === 'contorno' && (!calibracion || calibracion.tipo !== 'contorno')) {
-    nuevaDianaEstado.textContent = '⚠️ Elegiste "Contorno" pero todavía no lo terminaste. Tocá "Trazar contorno", marcá los puntos, y tocá "<img class="ui-icon" src="assets/icons/check.svg" alt="" aria-hidden="true"> Terminar contorno" antes de guardar.';
+    nuevaDianaEstado.textContent = '⚠️ Elegiste "Contorno" pero todavía no lo terminaste. Tocá "Trazar contorno", marcá los puntos, y tocá "Terminar contorno" antes de guardar.';
     return;
   }
 
