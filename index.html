@@ -997,6 +997,12 @@
             </div>
             <p class="hint" id="modoEdicionHint">Tocá un impacto para borrarlo, o un punto vacío para agregar uno.</p>
           </div>
+
+          <div class="slider-row" id="bloqueRadioManual" style="margin-top:12px;">
+            <label>Tamaño del círculo al marcar a mano</label>
+            <input type="range" id="radioManualSlider" min="25" max="100" step="25" value="100">
+            <p class="hint" id="radioManualHint">100% del tamaño actual</p>
+          </div>
         </div>
 
         <div class="row" id="ajustesAvanzadosToggle" style="margin-top:14px; cursor:pointer; justify-content:flex-start; align-items:center; gap:6px;">
@@ -1632,6 +1638,20 @@ ajustesAvanzadosToggle.addEventListener('click', () => {
 const modoEditarBtn = document.getElementById('modoEditarBtn');
 const modoMarcarBtn = document.getElementById('modoMarcarBtn');
 const modoEdicionHint = document.getElementById('modoEdicionHint');
+const radioManualSlider = document.getElementById('radioManualSlider');
+const radioManualHint = document.getElementById('radioManualHint');
+const RADIO_MANUAL_BASE = 10; // tamaño que ya tenía el marcado manual = 100%
+let radioManualPct = 100;
+
+function actualizarRadioManualHint() {
+  const px = Math.round(RADIO_MANUAL_BASE * radioManualPct / 100);
+  radioManualHint.textContent = `${radioManualPct}% del tamaño actual (${px}px)`;
+}
+radioManualSlider.addEventListener('input', () => {
+  radioManualPct = Number(radioManualSlider.value);
+  actualizarRadioManualHint();
+});
+actualizarRadioManualHint();
 const canvasScroll = document.getElementById('canvasScroll');
 const zoomInBtn = document.getElementById('zoomIn');
 const zoomOutBtn = document.getElementById('zoomOut');
@@ -1974,6 +1994,15 @@ function renderListaRondas() {
   `).join('');
 }
 
+function resetearFlujoTrasGuardar() {
+  limpiarCanvasActual();
+  tapadoAnteriores = null;
+  tapadoBloque.style.display = 'none';
+  confirmarAjusteRow.style.display = 'none';
+  document.getElementById('fileCamera').value = '';
+  document.getElementById('fileUpload').value = '';
+}
+
 document.getElementById('guardarRonda').addEventListener('click', async () => {
   if (!detecciones.length && !confirm('No hay impactos detectados. ¿Guardar igual?')) return;
   if (rondaAnteriorParaSeleccionActual() && tapadoAnteriores === null) {
@@ -2005,6 +2034,7 @@ document.getElementById('guardarRonda').addEventListener('click', async () => {
   };
   await guardarRondaDB(ronda);
   await refrescarRondas();
+  resetearFlujoTrasGuardar();
 
   // resumen de sesión en la nube (acumulado por tirador+fecha+diana+distancia)
   const { error: rpcError } = await sb.rpc('registrar_ronda_en_sesion', {
@@ -2468,7 +2498,7 @@ canvas.addEventListener('click', (e) => {
     // en modo "marcar" no se agrega ni se borra tocando espacio vacío
   } else {
     if (idx >= 0) detecciones.splice(idx, 1);
-    else detecciones.push({ x, y, r: 10, esNuevo: true });
+    else detecciones.push({ x, y, r: Math.round(RADIO_MANUAL_BASE * radioManualPct / 100), esNuevo: true });
   }
   if (calibracion) calcularPuntajes();
   redibujar();
