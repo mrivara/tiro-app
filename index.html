@@ -1000,7 +1000,7 @@
 
           <div class="slider-row" id="bloqueRadioManual" style="margin-top:12px;">
             <label>Tamaño del círculo al marcar a mano</label>
-            <input type="range" id="radioManualSlider" min="0" max="4" step="1" value="0">
+            <input type="range" id="radioManualSlider" min="0" max="4" step="1" value="4">
             <p class="hint" id="radioManualHint">100% del tamaño actual</p>
           </div>
         </div>
@@ -1641,7 +1641,7 @@ const modoEdicionHint = document.getElementById('modoEdicionHint');
 const radioManualSlider = document.getElementById('radioManualSlider');
 const radioManualHint = document.getElementById('radioManualHint');
 const RADIO_MANUAL_BASE = 10; // tamaño que ya tenía el marcado manual = 100%
-const RADIO_MANUAL_PASOS = [100, 70, 40, 20, 10];
+const RADIO_MANUAL_PASOS = [10, 20, 40, 70, 100]; // izquierda→derecha: 10% a 100%
 let radioManualPct = 100;
 
 function actualizarRadioManualHint() {
@@ -2355,7 +2355,8 @@ function redibujar() {
     if (d.esNuevo === false) color = '#8e8e93'; // gris: ya estaba de una ronda anterior
     else if (d.dentro === false) color = '#ff453a'; // rojo: nuevo pero fuera de la zona
     ctx.beginPath();
-    ctx.arc(d.x, d.y, Math.max(d.r + 4, 12), 0, 2 * Math.PI);
+    const rDibujo = d.manual ? Math.max(d.r, 3) : Math.max(d.r + 4, 12);
+    ctx.arc(d.x, d.y, rDibujo, 0, 2 * Math.PI);
     ctx.strokeStyle = color;
     ctx.lineWidth = 3;
     ctx.stroke();
@@ -2499,7 +2500,7 @@ canvas.addEventListener('click', (e) => {
     // en modo "marcar" no se agrega ni se borra tocando espacio vacío
   } else {
     if (idx >= 0) detecciones.splice(idx, 1);
-    else detecciones.push({ x, y, r: Math.round(RADIO_MANUAL_BASE * radioManualPct / 100), esNuevo: true });
+    else detecciones.push({ x, y, r: Math.round(RADIO_MANUAL_BASE * radioManualPct / 100), esNuevo: true, manual: true });
   }
   if (calibracion) calcularPuntajes();
   redibujar();
