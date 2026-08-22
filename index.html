@@ -1000,7 +1000,7 @@
 
           <div class="slider-row" id="bloqueRadioManual" style="margin-top:12px;">
             <label>Tamaño del círculo al marcar a mano</label>
-            <input type="range" id="radioManualSlider" min="25" max="100" step="25" value="100">
+            <input type="range" id="radioManualSlider" min="0" max="4" step="1" value="0">
             <p class="hint" id="radioManualHint">100% del tamaño actual</p>
           </div>
         </div>
@@ -1641,6 +1641,7 @@ const modoEdicionHint = document.getElementById('modoEdicionHint');
 const radioManualSlider = document.getElementById('radioManualSlider');
 const radioManualHint = document.getElementById('radioManualHint');
 const RADIO_MANUAL_BASE = 10; // tamaño que ya tenía el marcado manual = 100%
+const RADIO_MANUAL_PASOS = [100, 70, 40, 20, 10];
 let radioManualPct = 100;
 
 function actualizarRadioManualHint() {
@@ -1648,7 +1649,7 @@ function actualizarRadioManualHint() {
   radioManualHint.textContent = `${radioManualPct}% del tamaño actual (${px}px)`;
 }
 radioManualSlider.addEventListener('input', () => {
-  radioManualPct = Number(radioManualSlider.value);
+  radioManualPct = RADIO_MANUAL_PASOS[Number(radioManualSlider.value)];
   actualizarRadioManualHint();
 });
 actualizarRadioManualHint();
