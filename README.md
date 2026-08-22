@@ -1,29 +1,21 @@
-# Tiro App — Fase 2: Responsive iOS + Android
+# Tiro App — Fase 3: Iconografía
 
-Base: Fase 1 validada en producción.
-
-## Objetivo
-Adaptar la presentación para iPhone, Android, tablets y escritorio manteniendo una única aplicación web.
+Base: Fase 2 Responsive.
 
 ## Regla
-No se modificó la funcionalidad:
-- no se modificó JavaScript;
-- no se modificó OpenCV;
-- no se modificó Supabase;
-- no se modificó IndexedDB;
-- no se modificaron IDs ni event listeners.
+No se modificó la lógica funcional:
+- no se cambiaron funciones;
+- no se cambiaron IDs;
+- no se cambiaron event listeners;
+- no se cambió OpenCV;
+- no se cambió Supabase;
+- no se cambió IndexedDB.
 
-Los cambios de esta fase son de CSS/layout y comportamiento visual responsive.
+## Qué cambia
+- Reemplazo de emojis de acciones principales por SVG propios.
+- Sistema de iconos consistente en `assets/icons/`.
+- Iconos escalables y adecuados para iOS/Android.
+- El logo de Tiro App continúa siendo SVG propio.
 
-## Incluye
-- Safe areas para iPhone/notch/Dynamic Island.
-- `100dvh` para viewport móvil moderno.
-- Controles táctiles de tamaño cómodo.
-- Adaptación para teléfonos pequeños.
-- Adaptación para landscape.
-- Canvas preparado para conservar resolución real y desplazarse cuando corresponda.
-- Mejor comportamiento en tablets y desktop.
-- Preferencia de reducción de movimiento.
-
-## Próximo paso
-Validar en iPhone y Android. Si esta fase queda aprobada, continuar con el reemplazo sistemático de emojis por los SVG propios de `assets/icons/`.
+## Nota
+Los textos que se dibujan dentro del canvas por JavaScript (por ejemplo etiquetas de impactos) se mantienen porque forman parte de la capa de renderizado del canvas y no conviene alterar esa lógica en esta fase.

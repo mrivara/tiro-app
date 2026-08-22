@@ -359,6 +359,80 @@
     }
   }
 
+
+  /* ============================================================
+     TIRO APP — FASE 3: ICONOGRAFÍA
+     SVG propios. Solo presentación.
+     ============================================================ */
+
+  .ui-icon {
+    width: 19px;
+    height: 19px;
+    flex: 0 0 19px;
+    display: inline-block;
+    object-fit: contain;
+    vertical-align: -4px;
+    color: currentColor;
+  }
+
+  .ui-icon.sm {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+  }
+
+  .ui-icon.lg {
+    width: 22px;
+    height: 22px;
+    flex-basis: 22px;
+  }
+
+  .icon-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+  }
+
+  /* El emoji anterior no participa del layout */
+  .legacy-emoji {
+    display: none;
+  }
+
+  /* Iconos de acción: un poco más de contraste sin colorear cada SVG */
+  label.btn .ui-icon,
+  button.btn .ui-icon {
+    opacity: .95;
+  }
+
+  #zoomControls .ui-icon {
+    width: 18px;
+    height: 18px;
+    flex-basis: 18px;
+  }
+
+  .topbar .ui-icon {
+    width: 16px;
+    height: 16px;
+    flex-basis: 16px;
+    vertical-align: -3px;
+  }
+
+  @media (max-width: 390px) {
+    .ui-icon {
+      width: 18px;
+      height: 18px;
+      flex-basis: 18px;
+    }
+
+    label.btn .ui-icon,
+    button.btn .ui-icon {
+      width: 18px;
+      height: 18px;
+      flex-basis: 18px;
+    }
+  }
+
 </style>
 </head>
 <body>
@@ -387,13 +461,13 @@
   <div id="appContent" style="display:none;">
 
     <div class="topbar">
-      <span>👤 <b id="usuarioActual"></b> <span id="rolBadge"></span></span>
+      <span><img class="ui-icon" src="assets/icons/user.svg" alt="" aria-hidden="true"><b id="usuarioActual"></b> <span id="rolBadge"></span></span>
       <a href="#" id="logoutBtn">Cerrar sesión</a>
     </div>
 
     <div class="panel" id="adminPanel" style="display:none;">
       <div class="row" style="justify-content:space-between; align-items:center;">
-        <b>👥 Administración de usuarios</b>
+        <b><img class="ui-icon" src="assets/icons/users.svg" alt="" aria-hidden="true"> Administración de usuarios</b>
         <label class="btn secondary" id="abrirAdminPanel" style="flex:0; padding:8px 14px; font-size:13px;">Abrir</label>
       </div>
       <div id="adminPanelBody" style="display:none; margin-top:12px;">
@@ -439,7 +513,7 @@
         </div>
       </div>
       <div class="row" style="margin-top:8px;">
-        <label class="btn secondary" id="abrirAgregarDiana" style="font-size:13px;">➕ Agregar diana de referencia</label>
+        <label class="btn secondary" id="abrirAgregarDiana" style="font-size:13px;"><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Agregar diana de referencia</label>
       </div>
       <div class="slider-row">
         <label>Distancia</label>
@@ -456,7 +530,7 @@
 
     <!-- ============== PANEL: agregar diana nueva ============== -->
     <div class="panel" id="agregarDianaPanel" style="display:none;">
-      <b>➕ Nueva diana de referencia</b>
+      <b><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Nueva diana de referencia</b>
       <p class="hint">
         Subí una foto limpia del blanco (sin impactos, o con pocos),
         ajustá los valores de detección mirando el resultado, y guardala
@@ -469,7 +543,7 @@
       </div>
       <div class="row" style="margin-top:8px;">
         <label class="btn secondary">
-          🖼️ Elegir foto de referencia
+          <img class="ui-icon" src="assets/icons/image.svg" alt="" aria-hidden="true"> Elegir foto de referencia
           <input type="file" accept="image/*" id="nuevaDianaFoto">
         </label>
       </div>
@@ -512,7 +586,7 @@
             <label style="margin:0;">Tiene un anillo extra de referencia (decorativo, sin puntaje) más afuera de la última zona</label>
           </div>
           <div class="row">
-            <label class="btn secondary" id="calibrarGeometriaBtn">📍 Calibrar anillos sobre la foto</label>
+            <label class="btn secondary" id="calibrarGeometriaBtn"><img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar anillos sobre la foto</label>
           </div>
         </div>
 
@@ -523,18 +597,18 @@
             contorno. Cuando termines, tocá "Terminar contorno".
           </p>
           <div class="row">
-            <label class="btn secondary" id="trazarContornoBtn">📍 Trazar contorno sobre la foto</label>
+            <label class="btn secondary" id="trazarContornoBtn"><img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Trazar contorno sobre la foto</label>
           </div>
           <div id="contornoEstado" class="hint" style="margin-top:8px;"></div>
           <div class="row" id="terminarContornoRow" style="display:none; margin-top:8px;">
-            <button class="btn" id="terminarContornoBtn">✅ Terminar contorno</button>
+            <button class="btn" id="terminarContornoBtn"><img class="ui-icon" src="assets/icons/check.svg" alt="" aria-hidden="true"> Terminar contorno</button>
           </div>
         </div>
       </div>
 
       <div class="row" style="margin-top:12px;">
         <label class="btn secondary" id="cancelarAgregarDiana">Cancelar</label>
-        <button class="btn" id="guardarNuevaDiana">💾 Guardar diana</button>
+        <button class="btn" id="guardarNuevaDiana"><img class="ui-icon" src="assets/icons/save.svg" alt="" aria-hidden="true"> Guardar diana</button>
       </div>
     </div>
 
@@ -542,11 +616,11 @@
       <span class="step-badge">1</span><b>Foto del blanco</b>
       <div class="row" style="margin-top:12px;">
         <label class="btn">
-          📷 Sacar foto
+          <img class="ui-icon" src="assets/icons/camera.svg" alt="" aria-hidden="true"> Sacar foto
           <input type="file" accept="image/*" capture="environment" id="fileCamera">
         </label>
         <label class="btn secondary">
-          🖼️ Subir foto
+          <img class="ui-icon" src="assets/icons/image.svg" alt="" aria-hidden="true"> Subir foto
           <input type="file" accept="image/*" id="fileUpload">
         </label>
       </div>
@@ -554,10 +628,10 @@
     </div>
 
     <div class="panel" id="puntajePanel" style="display:none;">
-      <b id="puntajePanelTitulo">🎯 Puntaje / zona</b>
+      <b id="puntajePanelTitulo"><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Puntaje / zona</b>
       <p class="hint" id="puntajePanelHint"></p>
       <div class="row">
-        <label class="btn secondary" id="calibrarBtn">📍 Calibrar</label>
+        <label class="btn secondary" id="calibrarBtn"><img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar</label>
       </div>
       <div id="puntajeInfo" class="hint" style="display:none; margin-top:10px;"></div>
       <div class="row" id="confirmarAjusteRow" style="display:none; margin-top:10px;">
@@ -576,11 +650,11 @@
 
     <div id="canvasWrap">
       <div class="row" id="zoomControls" style="margin-bottom:8px;">
-        <label class="btn secondary" id="zoomOut" style="flex:0 0 50px;">➖</label>
+        <label class="btn secondary" id="zoomOut" style="flex:0 0 50px;"><img class="ui-icon" src="assets/icons/zoom-out.svg" alt="" aria-hidden="true"></label>
         <div style="flex:1; display:flex; align-items:center; justify-content:center; background:var(--panel-2); border-radius:12px; font-size:14px; color:var(--ink-dim);">
           🔍 <span id="zoomLabel">100%</span>
         </div>
-        <label class="btn secondary" id="zoomIn" style="flex:0 0 50px;">➕</label>
+        <label class="btn secondary" id="zoomIn" style="flex:0 0 50px;"><img class="ui-icon" src="assets/icons/zoom-in.svg" alt="" aria-hidden="true"></label>
       </div>
       <div id="canvasScroll" style="overflow:auto; max-height:70vh; border-radius:12px;">
         <canvas id="canvas"></canvas>
@@ -601,15 +675,15 @@
           <div class="slider-row">
             <label>Modo de edición al tocar la foto</label>
             <div class="row">
-              <label class="btn secondary" id="modoEditarBtn" style="flex:1; font-size:13px;">✏️ Agregar / borrar</label>
-              <label class="btn secondary" id="modoMarcarBtn" style="flex:1; font-size:13px;">🔁 Marcar previo / nuevo</label>
+              <label class="btn secondary" id="modoEditarBtn" style="flex:1; font-size:13px;"><img class="ui-icon" src="assets/icons/edit.svg" alt="" aria-hidden="true"> Agregar / borrar</label>
+              <label class="btn secondary" id="modoMarcarBtn" style="flex:1; font-size:13px;"><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Marcar previo / nuevo</label>
             </div>
             <p class="hint" id="modoEdicionHint">Tocá un impacto para borrarlo, o un punto vacío para agregar uno.</p>
           </div>
         </div>
 
         <div class="row" id="ajustesAvanzadosToggle" style="margin-top:14px; cursor:pointer; justify-content:flex-start; align-items:center; gap:6px;">
-          <span style="font-size:13px; color:var(--ink-dim);">⚙️ Ajustes de detección (avanzado) <span id="ajustesAvanzadosFlecha">▾</span></span>
+          <span style="font-size:13px; color:var(--ink-dim);"><img class="ui-icon" src="assets/icons/settings.svg" alt="" aria-hidden="true"> Ajustes de detección (avanzado) <span id="ajustesAvanzadosFlecha">▾</span></span>
         </div>
 
         <div id="ajustesAvanzadosPanel" style="display:none; margin-top:10px;">
@@ -646,8 +720,8 @@
           </div>
 
           <div class="row" style="margin-top:14px;" id="filaReanalizar">
-            <label class="btn secondary" id="reanalizar">🔄 Re-analizar</label>
-            <label class="btn secondary" id="reset">🗑️ Empezar de nuevo</label>
+            <label class="btn secondary" id="reanalizar"><img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Re-analizar</label>
+            <label class="btn secondary" id="reset"><img class="ui-icon" src="assets/icons/delete.svg" alt="" aria-hidden="true"> Empezar de nuevo</label>
           </div>
         </div>
 
@@ -663,18 +737,18 @@
     </p>
 
     <div class="panel" id="sesionPanel" style="display:none;">
-      <b>📋 Sesión</b>
+      <b><img class="ui-icon" src="assets/icons/session.svg" alt="" aria-hidden="true"> Sesión</b>
       <div class="slider-row">
         <label>Fecha de esta ronda</label>
         <input type="date" id="fechaInput">
       </div>
       <div id="comparacionInfo" class="hint" style="display:none;"></div>
       <div class="row" style="margin-top:12px;">
-        <label class="btn" id="guardarRonda">💾 Guardar esta ronda</label>
+        <label class="btn" id="guardarRonda"><img class="ui-icon" src="assets/icons/save.svg" alt="" aria-hidden="true"> Guardar esta ronda</label>
       </div>
       <div id="listaRondas" style="margin-top:14px;"></div>
       <div class="row" style="margin-top:10px;">
-        <label class="btn secondary" id="reiniciarSesion" style="font-size:13px;">🗑️ Reiniciar sesión (borra todas las rondas guardadas en este teléfono)</label>
+        <label class="btn secondary" id="reiniciarSesion" style="font-size:13px;"><img class="ui-icon" src="assets/icons/delete.svg" alt="" aria-hidden="true"> Reiniciar sesión (borra todas las rondas guardadas en este teléfono)</label>
       </div>
     </div>
 
@@ -980,19 +1054,19 @@ function actualizarPanelPuntaje(preset) {
   if (!geometria) { calibracion = null; puntajeInfo.style.display = 'none'; return; }
 
   if (geometria.tipo === 'contorno') {
-    document.getElementById('puntajePanelTitulo').textContent = '🎯 Zona (adentro / afuera)';
+    document.getElementById('puntajePanelTitulo').textContent = '<img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Zona (adentro / afuera)';
     document.getElementById('puntajePanelHint').innerHTML =
       'Tocá <b>3 esquinas</b> del área donde está la zona marcada (arriba-izq, ' +
       'arriba-der, abajo-izq) — con 3 puntos corrige también rotación y ' +
       'proporciones distintas entre fotos, no solo mover y escalar.';
-    calibrarBtn.textContent = '📍 Calibrar ubicación de la zona';
+    calibrarBtn.textContent = '<img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar ubicación de la zona';
   } else {
-    document.getElementById('puntajePanelTitulo').textContent = '🎯 Puntaje';
+    document.getElementById('puntajePanelTitulo').textContent = '<img class="ui-icon" src="assets/icons/target.svg" alt="" aria-hidden="true"> Puntaje';
     document.getElementById('puntajePanelHint').innerHTML =
       'Tocá <b>2 puntos opuestos</b> del anillo más grande (un lado, y el ' +
       'lado contrario cruzando el centro). Con eso calcula el centro y el ' +
       'puntaje de cada impacto.';
-    calibrarBtn.textContent = '📍 Calibrar (2 toques opuestos)';
+    calibrarBtn.textContent = '<img class="ui-icon" src="assets/icons/calibration.svg" alt="" aria-hidden="true"> Calibrar (2 toques opuestos)';
   }
 }
 
@@ -1142,7 +1216,7 @@ document.getElementById('guardarNuevaDiana').addEventListener('click', async () 
     return;
   }
   if (tipoGeometriaSelect.value === 'contorno' && (!calibracion || calibracion.tipo !== 'contorno')) {
-    nuevaDianaEstado.textContent = '⚠️ Elegiste "Contorno" pero todavía no lo terminaste. Tocá "Trazar contorno", marcá los puntos, y tocá "✅ Terminar contorno" antes de guardar.';
+    nuevaDianaEstado.textContent = '⚠️ Elegiste "Contorno" pero todavía no lo terminaste. Tocá "Trazar contorno", marcá los puntos, y tocá "<img class="ui-icon" src="assets/icons/check.svg" alt="" aria-hidden="true"> Terminar contorno" antes de guardar.';
     return;
   }
 
@@ -2057,7 +2131,7 @@ canvas.addEventListener('click', (e) => {
   if (calibrando === 'contorno') {
     calibrandoContornoTemp.push({ x, y });
     if (calibrandoContornoTemp.length >= 3) {
-      contornoEstado.innerHTML = `${calibrandoContornoTemp.length} puntos trazados. Seguí tocando el borde, o tocá <b style="color:var(--brass-bright);">"✅ Terminar contorno"</b> (más abajo) cuando ya alcance.`;
+      contornoEstado.innerHTML = `${calibrandoContornoTemp.length} puntos trazados. Seguí tocando el borde, o tocá <b style="color:var(--brass-bright);">"<img class="ui-icon" src="assets/icons/check.svg" alt="" aria-hidden="true"> Terminar contorno"</b> (más abajo) cuando ya alcance.`;
       terminarContornoRow.style.display = 'flex';
     } else {
       contornoEstado.textContent = `${calibrandoContornoTemp.length} punto(s) trazados — necesitás al menos 3.`;
