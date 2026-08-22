@@ -1,1 +1,12 @@
-Tiro App — Fase 4: flujo principal. Mejoras visuales de sesión, foto y análisis. Sin cambios a la lógica, IDs, listeners, OpenCV, Supabase o IndexedDB.
+# Tiro App — Fase 5
+
+Bloque visual:
+- Calibración
+- Ajustes avanzados
+- Banco de dianas
+
+Regla estricta: no se modificó la lógica funcional, JavaScript, IDs,
+event listeners, OpenCV, Supabase, IndexedDB ni algoritmos.
+
+Los cambios son CSS/layout/presentación para mejorar jerarquía,
+legibilidad y uso táctil.
